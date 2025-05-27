@@ -145,22 +145,66 @@ CREATE TABLE `rentals` (
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `total_price` decimal(10,2) NOT NULL CHECK (`total_price` >= 0),
-  `status` enum('active','completed','cancelled') NOT NULL DEFAULT 'active',
+  `status` enum('active','completed','cancelled','scheduled') NOT NULL DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `driver_id` int(11) DEFAULT NULL,
+  `driver_fee` decimal(10,2) DEFAULT 0.00,
+  `driver_rating` decimal(3,1) DEFAULT NULL,
+  `rental_duration` int(11) NOT NULL DEFAULT 1,
+  `rental_start_date` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   KEY `car_id` (`car_id`),
   CONSTRAINT `rentals_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `rentals_ibfk_2` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE
+  CONSTRAINT `rentals_ibfk_2` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `rentals_ibfk_3` FOREIGN KEY (`driver_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `rentals`
 --
 
-INSERT INTO `rentals` (`id`, `user_id`, `car_id`, `start_date`, `end_date`, `total_price`, `status`, `created_at`) VALUES
-(1, 4, 1, '2023-10-01', '2023-10-05', 200.00, 'completed', '2025-05-24 11:10:06'),
-(2, 4, 2, '2023-10-10', '2023-10-15', 225.00, 'active', '2025-05-24 11:10:06');
+INSERT INTO `rentals` (`id`, `user_id`, `car_id`, `start_date`, `end_date`, `total_price`, `status`, `created_at`, `driver_id`, `driver_fee`, `driver_rating`, `rental_duration`, `rental_start_date`) VALUES
+(1, 4, 1, '2023-10-01', '2023-10-05', 200.00, 'completed', '2025-05-24 11:10:06', NULL, 0.00, NULL, 1, NULL),
+(2, 4, 2, '2023-10-10', '2023-10-15', 225.00, 'active', '2025-05-24 11:10:06', NULL, 0.00, NULL, 1, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `driver_availability`
+--
+
+CREATE TABLE `driver_availability` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `driver_id` int(11) NOT NULL,
+  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
+  `available_from` time NOT NULL,
+  `available_to` time NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `driver_id` (`driver_id`),
+  CONSTRAINT `driver_availability_ibfk_1` FOREIGN KEY (`driver_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `driver_details`
+--
+
+CREATE TABLE `driver_details` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `license_number` varchar(50) NOT NULL,
+  `license_expiry` date NOT NULL,
+  `contact_number` varchar(20) NOT NULL,
+  `address` text NOT NULL,
+  `status` enum('active','inactive','suspended') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  CONSTRAINT `driver_details_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Final SQL settings

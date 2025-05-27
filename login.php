@@ -2,8 +2,29 @@
 session_start();
 
 if (isset($_SESSION['user_id'])) {
-    header('Location: dashboard.php');
-    exit;
+    // Check role and redirect accordingly
+    if (isset($_SESSION['role'])) {
+        switch($_SESSION['role']) {
+            case 'superadmin':
+                header('Location: superadmin_dashboard.php');
+                break;
+            case 'admin':
+                header('Location: admin_dashboard.php');
+                break;
+            case 'staff':
+                header('Location: staff_dashboard.php');
+                break;
+            case 'client':
+                header('Location: client_dashboard.php');
+                break;
+            case 'driver':
+                header('Location: driver_dashboard.php');
+                break;
+            default:
+                header('Location: dashboard.php');
+        }
+        exit;
+    }
 }
 
 require 'db.php';
@@ -16,7 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt = $pdo->prepare("SELECT u.*, r.name as role_name 
+                          FROM users u 
+                          LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                          LEFT JOIN roles r ON ur.role_id = r.id 
+                          WHERE u.username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
@@ -28,7 +53,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            header('Location: dashboard.php');
+            $_SESSION['role'] = $user['role_name'];
+
+            // Redirect based on role
+            switch($user['role_name']) {
+                case 'superadmin':
+                    header('Location: dashboard_superadmin.php');
+                    break;
+                case 'admin':
+                    header('Location: dashboard_admin.php');
+                    break;
+                case 'staff':
+                    header('Location: dashboard_staff.php');
+                    break;
+                case 'client':
+                    header('Location: dashboard_client.php');
+                    break;
+                case 'driver':
+                    header('Location: dashboard_driver.php');
+                    break;
+                default:
+                    header('Location: dashboard.php');
+            }
             exit;
         }
     } else {
