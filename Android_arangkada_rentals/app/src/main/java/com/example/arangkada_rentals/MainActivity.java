@@ -90,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
                 os.close();
 
                 int responseCode = conn.getResponseCode();
+
                 BufferedReader reader = new BufferedReader(new InputStreamReader(
                         (responseCode == 200) ? conn.getInputStream() : conn.getErrorStream()
                 ));
@@ -101,7 +102,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 reader.close();
 
-                runOnUiThread(() -> handleLoginResponse(result.toString()));
+                String response = result.toString();
+
+                runOnUiThread(() -> handleLoginResponse(response));
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -112,6 +115,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleLoginResponse(String response) {
+        // Debug log of raw response
+        System.out.println("Server response: " + response);
+
+        if (response == null || response.trim().isEmpty()) {
+            Toast.makeText(this, "Empty response from server", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         try {
             JSONObject jsonObject = new JSONObject(response);
 
