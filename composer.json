@@ -1,5 +1,22 @@
 {
+    "name": "your-vendor/your-project",
+    "description": "Project description here",
+    "type": "project",
     "require": {
+        "php": ">=7.4",
         "phpmailer/phpmailer": "^6.10"
-    }
+    },
+    "autoload": {
+        "psr-4": {
+            "YourVendor\\YourProject\\": "src/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "minimum-stability": "stable",
+    "license": "MIT"
 }
