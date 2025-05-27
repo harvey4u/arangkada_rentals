@@ -1,38 +1,42 @@
 <?php
 session_start();
+require 'db.php';
 
-if (isset($_SESSION['user_id'])) {
-    header('Location: dashboard.php');
+if (!isset($_GET['email'])) {
+    header('Location: recover.php');
     exit;
 }
 
-require 'db.php';
-
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: 0");
+$email = $_GET['email'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $otp = $_POST['otp'];
+    $new_password = $_POST['new_password'];
+    $confirm_password = $_POST['confirm_password'];
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch();
-
-    if ($user) {
-        if (!password_verify($password, $user['password'])) {
-            $error = "❌ Invalid username or password.";
-        } elseif (!$user['is_verified']) {
-            $error = "⚠️ Please verify your email before logging in.";
-        } else {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            header('Location: dashboard.php');
-            exit;
-        }
+    if ($new_password !== $confirm_password) {
+        $_SESSION['error_message'] = "Passwords do not match.";
     } else {
-        $error = "❌ Invalid username or password.";
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND verification_code = ? AND verification_expires_at > NOW()");
+            $stmt->execute([$email, $otp]);
+            $user = $stmt->fetch();
+
+            if ($user) {
+                // Hash the new password and update the user
+                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                $updateStmt = $pdo->prepare("UPDATE users SET password = ?, verification_code = NULL, verification_expires_at = NULL WHERE email = ?");
+                $updateStmt->execute([$hashed_password, $email]);
+
+                $_SESSION['success_message'] = "Password has been reset successfully. You can now login with your new password.";
+                header("Location: login.php");
+                exit;
+            } else {
+                $_SESSION['error_message'] = "Invalid or expired OTP code.";
+            }
+        } catch (PDOException $e) {
+            $_SESSION['error_message'] = "Database error. Please try again later.";
+        }
     }
 }
 ?>
@@ -41,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Arangkada Car Rentals</title>
+    <title>Reset Password - Arangkada Car Rentals</title>
     <style>
         body {
             background: #f4f6f8;
@@ -135,24 +139,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .btn:hover {
             background: #2980b9;
         }
-        .register-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .register-btn {
-            background: #fff;
-            color: #3498db;
-            border: 2px solid #3498db;
-            padding: 10px 24px;
-            border-radius: 25px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .register-btn:hover {
-            background: #3498db;
-            color: #fff;
-        }
         .footer {
             background: #3498db;
             color: #fff;
@@ -165,19 +151,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             bottom: 0;
             width: 100%;
         }
-        .forgot-password {
+        .description {
             text-align: center;
-            margin: 15px 0;
-        }
-        .forgot-password a {
-            color: #3498db;
-            text-decoration: none;
-            font-size: 0.9em;
-            transition: color 0.2s;
-        }
-        .forgot-password a:hover {
-            color: #2980b9;
-            text-decoration: underline;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 0.95em;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -190,39 +169,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </header>
 
     <div class="container">
-        <h2 class="form-title">Login to Your Account</h2>
+        <h2 class="form-title">Reset Password</h2>
+        
+        <p class="description">Enter the OTP code sent to your email and your new password.</p>
 
-        <?php
-        if (isset($_SESSION['message'])) {
-            echo "<div class='message success'>{$_SESSION['message']}</div>";
-            unset($_SESSION['message']);
-        }
-
-        if (isset($error)) {
-            echo "<div class='message error'>$error</div>";
-        }
-        ?>
+        <?php if (isset($_SESSION['error_message'])): ?>
+            <div class="message error">
+                <?php 
+                echo $_SESSION['error_message'];
+                unset($_SESSION['error_message']);
+                ?>
+            </div>
+        <?php endif; ?>
 
         <form method="POST">
             <div class="form-group">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
+                <input type="text" name="otp" placeholder="Enter OTP Code" required>
+                <input type="password" name="new_password" placeholder="New Password" required>
+                <input type="password" name="confirm_password" placeholder="Confirm New Password" required>
             </div>
-            <button type="submit" class="btn">Login</button>
+            <button type="submit" class="btn">Reset Password</button>
         </form>
-
-        <div class="forgot-password">
-            <a href="recover.php">Forgot Password?</a>
-        </div>
-
-        <div class="register-link">
-            <p>Don't have an account?</p>
-            <a href="register.php"><button type="button" class="register-btn">Register Now</button></a>
-        </div>
     </div>
 
     <footer class="footer">
         <p>&copy; 2025 Arangkada Car Rentals. All rights reserved.</p>
     </footer>
 </body>
-</html>
+</html> 
