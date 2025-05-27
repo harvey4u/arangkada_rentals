@@ -26,40 +26,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($usernameExists->fetchColumn()) {
         $_SESSION['error'] = "Username already taken.";
     } else {
-        // Insert user
-        $stmt = $pdo->prepare("INSERT INTO users (username, password, email, verification_code, verification_expires_at, is_verified) VALUES (?, ?, ?, ?, ?, 0)");
-        $stmt->execute([$username, $password, $email, $otp, $expiresAt]);
-        $userId = $pdo->lastInsertId();
-
-        // Assign role
-        $roleQuery = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
-        $roleQuery->execute(['renter']);
-        $roleId = $roleQuery->fetch()['id'];
-
-        $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)")->execute([$userId, $roleId]);
-
-        // Send OTP email
-        $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com';
-            $mail->SMTPAuth = true;
-            $mail->Username = 'hontiverosharvey04@gmail.com'; // Your email
-            $mail->Password = 'mfpl qxgc kanx njfc'; // Your app password
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
+            // Begin transaction
+            $pdo->beginTransaction();
 
-            $mail->setFrom('hontiverosharvey04@gmail.com', 'Arangkada Rental');
-            $mail->addAddress($email, $username);
-            $mail->Subject = 'Your OTP Code';
-            $mail->Body = "Hi $username,\n\nYour OTP code is: $otp\nThis OTP will expire in 10 minutes.\nPlease enter this on the verification page.";
+            // Insert user
+            $stmt = $pdo->prepare("INSERT INTO users (username, password, email, verification_code, verification_expires_at, is_verified) VALUES (?, ?, ?, ?, ?, 0)");
+            $stmt->execute([$username, $password, $email, $otp, $expiresAt]);
+            $userId = $pdo->lastInsertId();
 
-            $mail->send();
-            $_SESSION['message'] = "Registration successful! Please check your email for the OTP.";
-            header("Location: otp_verify.php?email=" . urlencode($email));
-            exit;
+            // Get role ID for 'renter'
+            $roleQuery = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
+            $roleQuery->execute(['renter']);
+            $role = $roleQuery->fetch();
+
+            if (!$role) {
+                // Rollback if role not found
+                $pdo->rollBack();
+                $_SESSION['error'] = "User role 'renter' not found. Please contact support.";
+                header("Location: register.php");
+                exit;
+            }
+
+            $roleId = $role['id'];
+
+            // Assign role to user
+            $assignRole = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+            $assignRole->execute([$userId, $roleId]);
+
+            // Commit transaction
+            $pdo->commit();
+
+            // Send OTP email
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'hontiverosharvey04@gmail.com'; // Your email
+                $mail->Password = 'mfpl qxgc kanx njfc'; // Your app password
+                $mail->SMTPSecure = 'tls';
+                $mail->Port = 587;
+
+                $mail->setFrom('hontiverosharvey04@gmail.com', 'Arangkada Rental');
+                $mail->addAddress($email, $username);
+                $mail->Subject = 'Your OTP Code';
+                $mail->Body = "Hi $username,\n\nYour OTP code is: $otp\nThis OTP will expire in 10 minutes.\nPlease enter this on the verification page.";
+
+                $mail->send();
+                $_SESSION['message'] = "Registration successful! Please check your email for the OTP.";
+                header("Location: otp_verify.php?email=" . urlencode($email));
+                exit;
+            } catch (Exception $e) {
+                $_SESSION['error'] = "Error sending OTP: {$mail->ErrorInfo}";
+            }
         } catch (Exception $e) {
-            $_SESSION['error'] = "Error sending OTP: {$mail->ErrorInfo}";
+            // Rollback on any error
+            $pdo->rollBack();
+            $_SESSION['error'] = "Registration failed: " . $e->getMessage();
         }
     }
 
@@ -71,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Register</title>
 </head>
 <body>

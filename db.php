@@ -1,11 +1,13 @@
 <?php
-$host = 'localhost:3308'; // Specify the port here
+$host = '127.0.0.1';       // Use IP instead of 'localhost' to avoid socket issues
+$port = '3306';            // Separate the port
 $db   = 'car_rental_system';
 $user = 'root';
-$pass = ''; // Make sure to include the correct password
+$pass = '';                // Default for XAMPP
 $charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
+
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -15,5 +17,5 @@ $options = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+    die("Database connection failed: " . $e->getMessage());
 }

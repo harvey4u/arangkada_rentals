@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,6 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Arangkada_rentals"
         tools:targetApi="31">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -21,6 +24,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Dashboard Activities -->
+        <activity
+            android:name=".Dashboard.SuperAdminDashboardActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Dashboard.AdminDashboardActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Dashboard.StaffDashboardActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Dashboard.DriverDashboardActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Dashboard.ClientDashboardActivity"
+            android:exported="true" />
+
     </application>
 
 </manifest>
