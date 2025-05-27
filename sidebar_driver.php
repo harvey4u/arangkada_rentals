@@ -1,4 +1,5 @@
 <?php
+session_start();
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'driver') {
     header('Location: login.php');
     exit;
@@ -19,6 +20,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         color: #ecf0f1;
         transition: all 0.3s ease;
         z-index: 1000;
+        overflow-y: auto;
     }
 
     .sidebar-header {
@@ -79,22 +81,23 @@ $current_page = basename($_SERVER['PHP_SELF']);
         text-align: center;
     }
 
-    .menu-divider {
-        height: 1px;
-        background: #34495e;
-        margin: 1rem 1.5rem;
-    }
-
     .menu-header {
         color: #bdc3c7;
         font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 1px;
         padding: 1.5rem 1.5rem 0.5rem;
+        font-weight: 600;
+    }
+
+    .menu-divider {
+        height: 1px;
+        background: #34495e;
+        margin: 1rem 1.5rem;
     }
 
     .user-info {
-        position: absolute;
+        position: sticky;
         bottom: 0;
         width: 100%;
         padding: 1rem 1.5rem;
@@ -133,6 +136,19 @@ $current_page = basename($_SERVER['PHP_SELF']);
         color: #bdc3c7;
     }
 
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        background: #e74c3c;
+        color: white;
+        min-width: 1.5rem;
+    }
+
     .logout-btn {
         display: flex;
         align-items: center;
@@ -145,6 +161,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         margin-top: 0.5rem;
         background: #e74c3c;
         transition: background 0.3s ease;
+        justify-content: center;
     }
 
     .logout-btn:hover {
@@ -171,7 +188,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
 
     <ul class="menu-items">
-        <li class="menu-header">Main Navigation</li>
+        <li class="menu-header">Maisn Navigation</li>
         <li class="menu-item">
             <a href="dashboard_driver.php" class="menu-link <?= $current_page === 'dashboard_driver.php' ? 'active' : '' ?>">
                 <i class="fas fa-tachometer-alt"></i>
@@ -181,15 +198,32 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="menu-header">Trip Management</li>
         <li class="menu-item">
-            <a href="view_schedule.php" class="menu-link <?= $current_page === 'view_schedule.php' ? 'active' : '' ?>">
-                <i class="fas fa-calendar-alt"></i>
-                <span>My Schedule</span>
-            </a>
-        </li>
-        <li class="menu-item">
             <a href="active_trips.php" class="menu-link <?= $current_page === 'active_trips.php' ? 'active' : '' ?>">
                 <i class="fas fa-route"></i>
                 <span>Active Trips</span>
+                <?php
+                // Get count of active trips
+                require_once 'db.php';
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE driver_id = ? AND status = 'active'");
+                $stmt->execute([$_SESSION['user_id']]);
+                $activeCount = $stmt->fetchColumn();
+                if ($activeCount > 0): ?>
+                    <span class="badge"><?= $activeCount ?></span>
+                <?php endif; ?>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="upcoming_trips.php" class="menu-link <?= $current_page === 'upcoming_trips.php' ? 'active' : '' ?>">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Upcoming Trips</span>
+                <?php
+                // Get count of scheduled trips
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE driver_id = ? AND status = 'scheduled'");
+                $stmt->execute([$_SESSION['user_id']]);
+                $scheduledCount = $stmt->fetchColumn();
+                if ($scheduledCount > 0): ?>
+                    <span class="badge"><?= $scheduledCount ?></span>
+                <?php endif; ?>
             </a>
         </li>
         <li class="menu-item">
@@ -199,11 +233,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
 
-        <li class="menu-header">Personal</li>
+        <li class="menu-header">Schedule & Earnings</li>
         <li class="menu-item">
-            <a href="update_availability.php" class="menu-link <?= $current_page === 'update_availability.php' ? 'active' : '' ?>">
+            <a href="my_schedule.php" class="menu-link <?= $current_page === 'my_schedule.php' ? 'active' : '' ?>">
+                <i class="fas fa-calendar-week"></i>
+                <span>My Schedule</span>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="availability.php" class="menu-link <?= $current_page === 'availability.php' ? 'active' : '' ?>">
                 <i class="fas fa-clock"></i>
-                <span>My Availability</span>
+                <span>Set Availability</span>
             </a>
         </li>
         <li class="menu-item">
@@ -212,16 +252,46 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <span>My Earnings</span>
             </a>
         </li>
+
+        <li class="menu-header">Performance</li>
         <li class="menu-item">
             <a href="reviews.php" class="menu-link <?= $current_page === 'reviews.php' ? 'active' : '' ?>">
                 <i class="fas fa-star"></i>
                 <span>My Reviews</span>
+                <?php
+                // Get count of new reviews
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE driver_id = ? AND driver_rating IS NOT NULL AND status = 'completed' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
+                $stmt->execute([$_SESSION['user_id']]);
+                $newReviews = $stmt->fetchColumn();
+                if ($newReviews > 0): ?>
+                    <span class="badge"><?= $newReviews ?></span>
+                <?php endif; ?>
             </a>
         </li>
         <li class="menu-item">
+            <a href="statistics.php" class="menu-link <?= $current_page === 'statistics.php' ? 'active' : '' ?>">
+                <i class="fas fa-chart-line"></i>
+                <span>Statistics</span>
+            </a>
+        </li>
+
+        <li class="menu-header">Account</li>
+        <li class="menu-item">
             <a href="profile.php" class="menu-link <?= $current_page === 'profile.php' ? 'active' : '' ?>">
-                <i class="fas fa-user-edit"></i>
+                <i class="fas fa-user-circle"></i>
                 <span>My Profile</span>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="documents.php" class="menu-link <?= $current_page === 'documents.php' ? 'active' : '' ?>">
+                <i class="fas fa-file-alt"></i>
+                <span>My Documents</span>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="settings.php" class="menu-link <?= $current_page === 'settings.php' ? 'active' : '' ?>">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
             </a>
         </li>
     </ul>
