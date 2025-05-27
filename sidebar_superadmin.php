@@ -19,6 +19,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         color: #ecf0f1;
         transition: all 0.3s ease;
         z-index: 1000;
+        overflow-y: auto;
     }
 
     .sidebar-header {
@@ -79,22 +80,30 @@ $current_page = basename($_SERVER['PHP_SELF']);
         text-align: center;
     }
 
-    .menu-divider {
-        height: 1px;
-        background: #34495e;
-        margin: 1rem 1.5rem;
-    }
-
     .menu-header {
         color: #bdc3c7;
         font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 1px;
         padding: 1.5rem 1.5rem 0.5rem;
+        font-weight: 600;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        background: #e74c3c;
+        color: white;
+        min-width: 1.5rem;
     }
 
     .user-info {
-        position: absolute;
+        position: sticky;
         bottom: 0;
         width: 100%;
         padding: 1rem 1.5rem;
@@ -145,13 +154,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
         margin-top: 0.5rem;
         background: #e74c3c;
         transition: background 0.3s ease;
+        justify-content: center;
     }
 
     .logout-btn:hover {
         background: #c0392b;
     }
 
-    /* Responsive Design */
     @media (max-width: 768px) {
         .sidebar {
             transform: translateX(-100%);
@@ -185,6 +194,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="manage_users.php" class="menu-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
                 <i class="fas fa-users"></i>
                 <span>Users</span>
+                <?php
+                require_once 'db.php';
+                $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
+                $newUsers = $stmt->fetchColumn();
+                if ($newUsers > 0): ?>
+                    <span class="badge"><?= $newUsers ?></span>
+                <?php endif; ?>
             </a>
         </li>
         <li class="menu-item">
@@ -197,6 +213,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="manage_rentals.php" class="menu-link <?= $current_page === 'manage_rentals.php' ? 'active' : '' ?>">
                 <i class="fas fa-file-contract"></i>
                 <span>Rentals</span>
+                <?php
+                $stmt = $pdo->query("SELECT COUNT(*) FROM rentals WHERE status = 'active'");
+                $activeRentals = $stmt->fetchColumn();
+                if ($activeRentals > 0): ?>
+                    <span class="badge"><?= $activeRentals ?></span>
+                <?php endif; ?>
             </a>
         </li>
         <li class="menu-item">

@@ -1,124 +1,308 @@
 <?php
-// Check if user is logged in and is client
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'client') {
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'client') {
     header('Location: login.php');
     exit;
 }
+
+// Get the current page name
+$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <style>
     .sidebar {
-        width: 250px;
         background: #2c3e50;
-        padding: 20px;
-        min-height: 100vh;
-        color: white;
+        width: 250px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        color: #ecf0f1;
         transition: all 0.3s ease;
+        z-index: 1000;
+        overflow-y: auto;
     }
 
     .sidebar-header {
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 20px;
+        padding: 1.5rem;
+        text-align: center;
+        background: #243342;
+        border-bottom: 1px solid #34495e;
     }
 
     .sidebar-header h3 {
-        color: white;
         margin: 0;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         font-weight: 600;
     }
 
-    .sidebar-menu {
+    .sidebar-brand {
+        color: #ecf0f1;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .menu-items {
+        padding: 1rem 0;
         list-style: none;
-        padding: 0;
         margin: 0;
     }
 
-    .sidebar-menu li {
-        margin-bottom: 5px;
+    .menu-item {
+        padding: 0.5rem 1.5rem;
     }
 
-    .sidebar-menu a {
+    .menu-link {
+        color: #ecf0f1;
+        text-decoration: none;
         display: flex;
         align-items: center;
-        padding: 12px 15px;
-        color: rgba(255, 255, 255, 0.7);
-        text-decoration: none;
-        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
         transition: all 0.3s ease;
+        gap: 0.75rem;
     }
 
-    .sidebar-menu a:hover, .sidebar-menu a.active {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
+    .menu-link:hover {
+        background: #34495e;
+        color: #3498db;
     }
 
-    .sidebar-menu i {
-        margin-right: 10px;
-        font-size: 1.1rem;
+    .menu-link.active {
+        background: #3498db;
+        color: #fff;
     }
 
-    .menu-label {
-        font-size: 0.8rem;
+    .menu-link i {
+        width: 20px;
+        text-align: center;
+    }
+
+    .menu-header {
+        color: #bdc3c7;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.4);
-        margin: 20px 0 10px;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
+        padding: 1.5rem 1.5rem 0.5rem;
+        font-weight: 600;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        background: #e74c3c;
+        color: white;
+        min-width: 1.5rem;
+    }
+
+    .user-info {
+        position: sticky;
+        bottom: 0;
+        width: 100%;
+        padding: 1rem 1.5rem;
+        background: #243342;
+        border-top: 1px solid #34495e;
+    }
+
+    .user-info-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #3498db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .user-details {
+        flex-grow: 1;
+    }
+
+    .user-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .user-role {
+        font-size: 0.8rem;
+        color: #bdc3c7;
+    }
+
+    .logout-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #ecf0f1;
+        text-decoration: none;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+        background: #e74c3c;
+        transition: background 0.3s ease;
+        justify-content: center;
+    }
+
+    .logout-btn:hover {
+        background: #c0392b;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
     }
 </style>
 
 <div class="sidebar">
     <div class="sidebar-header">
-        <h3>Client Portal</h3>
+        <a href="index.php" class="sidebar-brand">
+            <i class="fas fa-car"></i>
+            <h3>Arangkada</h3>
+        </a>
     </div>
 
-    <ul class="sidebar-menu">
-        <li>
-            <a href="dashboard_client.php" class="<?= basename($_SERVER['PHP_SELF']) == 'dashboard_client.php' ? 'active' : '' ?>">
+    <ul class="menu-items">
+        <li class="menu-header">Main Navigation</li>
+        <li class="menu-item">
+            <a href="dashboard_client.php" class="menu-link <?= $current_page === 'dashboard_client.php' ? 'active' : '' ?>">
                 <i class="fas fa-tachometer-alt"></i>
-                Dashboard
+                <span>Dashboard</span>
             </a>
         </li>
 
-        <div class="menu-label">Rentals</div>
-        <li>
-            <a href="available_cars.php" class="<?= basename($_SERVER['PHP_SELF']) == 'available_cars.php' ? 'active' : '' ?>">
+        <li class="menu-header">Car Rental</li>
+        <li class="menu-item">
+            <a href="browse_cars.php" class="menu-link <?= $current_page === 'browse_cars.php' ? 'active' : '' ?>">
                 <i class="fas fa-car"></i>
-                Available Cars
+                <span>Browse Cars</span>
             </a>
         </li>
-        <li>
-            <a href="my_rentals.php" class="<?= basename($_SERVER['PHP_SELF']) == 'my_rentals.php' ? 'active' : '' ?>">
-                <i class="fas fa-clock"></i>
-                My Rentals
+        <li class="menu-item">
+            <a href="active_rentals.php" class="menu-link <?= $current_page === 'active_rentals.php' ? 'active' : '' ?>">
+                <i class="fas fa-file-contract"></i>
+                <span>Active Rentals</span>
+                <?php
+                require_once 'db.php';
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE user_id = ? AND status = 'active'");
+                $stmt->execute([$_SESSION['user_id']]);
+                $activeRentals = $stmt->fetchColumn();
+                if ($activeRentals > 0): ?>
+                    <span class="badge"><?= $activeRentals ?></span>
+                <?php endif; ?>
             </a>
         </li>
-        <li>
-            <a href="rental_history.php" class="<?= basename($_SERVER['PHP_SELF']) == 'rental_history.php' ? 'active' : '' ?>">
+        <li class="menu-item">
+            <a href="rental_history.php" class="menu-link <?= $current_page === 'rental_history.php' ? 'active' : '' ?>">
                 <i class="fas fa-history"></i>
-                Rental History
+                <span>Rental History</span>
             </a>
         </li>
 
-        <div class="menu-label">Account</div>
-        <li>
-            <a href="profile.php" class="<?= basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : '' ?>">
-                <i class="fas fa-user"></i>
-                My Profile
+        <li class="menu-header">Payments</li>
+        <li class="menu-item">
+            <a href="payments.php" class="menu-link <?= $current_page === 'payments.php' ? 'active' : '' ?>">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Payment History</span>
             </a>
         </li>
-        <li>
-            <a href="payment_methods.php" class="<?= basename($_SERVER['PHP_SELF']) == 'payment_methods.php' ? 'active' : '' ?>">
-                <i class="fas fa-credit-card"></i>
-                Payment Methods
+        <li class="menu-item">
+            <a href="invoices.php" class="menu-link <?= $current_page === 'invoices.php' ? 'active' : '' ?>">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Invoices</span>
             </a>
         </li>
-        <li>
-            <a href="support.php" class="<?= basename($_SERVER['PHP_SELF']) == 'support.php' ? 'active' : '' ?>">
+
+        <li class="menu-header">Support</li>
+        <li class="menu-item">
+            <a href="support_tickets.php" class="menu-link <?= $current_page === 'support_tickets.php' ? 'active' : '' ?>">
+                <i class="fas fa-ticket-alt"></i>
+                <span>Support Tickets</span>
+                <?php
+                try {
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM support_tickets WHERE user_id = ? AND status = 'open'");
+                    $stmt->execute([$_SESSION['user_id']]);
+                    $openTickets = $stmt->fetchColumn();
+                    if ($openTickets > 0): ?>
+                        <span class="badge"><?= $openTickets ?></span>
+                    <?php endif;
+                } catch (PDOException $e) {
+                    // Table doesn't exist or other database error
+                    // Silently fail - no badge will be shown
+                } ?>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="faq.php" class="menu-link <?= $current_page === 'faq.php' ? 'active' : '' ?>">
                 <i class="fas fa-question-circle"></i>
-                Support
+                <span>FAQ</span>
+            </a>
+        </li>
+
+        <li class="menu-header">Account</li>
+        <li class="menu-item">
+            <a href="profile.php" class="menu-link <?= $current_page === 'profile.php' ? 'active' : '' ?>">
+                <i class="fas fa-user-circle"></i>
+                <span>My Profile</span>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="notifications.php" class="menu-link <?= $current_page === 'notifications.php' ? 'active' : '' ?>">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+                <?php
+                try {
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+                    $stmt->execute([$_SESSION['user_id']]);
+                    $unreadNotifications = $stmt->fetchColumn();
+                    if ($unreadNotifications > 0): ?>
+                        <span class="badge"><?= $unreadNotifications ?></span>
+                    <?php endif;
+                } catch (PDOException $e) {
+                    // Table doesn't exist or other database error
+                    // Silently fail - no badge will be shown
+                } ?>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="settings.php" class="menu-link <?= $current_page === 'settings.php' ? 'active' : '' ?>">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
             </a>
         </li>
     </ul>
+
+    <div class="user-info">
+        <div class="user-info-content">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="user-details">
+                <div class="user-name"><?= htmlspecialchars($_SESSION['username']) ?></div>
+                <div class="user-role">Client</div>
+            </div>
+        </div>
+        <a href="logout.php" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </div>
 </div> 
