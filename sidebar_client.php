@@ -22,11 +22,46 @@ $current_page = basename($_SERVER['PHP_SELF']);
         overflow-y: auto;
     }
 
+    .sidebar.collapsed {
+        left: -250px;
+    }
+
+    .content-wrapper {
+        margin-left: 250px;
+        transition: all 0.3s ease;
+    }
+
+    .content-wrapper.expanded {
+        margin-left: 0;
+    }
+
     .sidebar-header {
         padding: 1.5rem;
         text-align: center;
         background: #243342;
         border-bottom: 1px solid #34495e;
+        position: relative;
+    }
+
+    .hamburger-menu {
+        position: absolute;
+        right: -40px;
+        top: 15px;
+        background: #2c3e50;
+        border: none;
+        color: #ecf0f1;
+        width: 40px;
+        height: 40px;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .hamburger-menu:hover {
+        background: #34495e;
     }
 
     .sidebar-header h3 {
@@ -42,6 +77,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+    }
+
+    .sidebar-brand:hover {
+        color: #3498db;
     }
 
     .menu-items {
@@ -68,10 +107,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
     .menu-link:hover {
         background: #34495e;
         color: #3498db;
+        text-decoration: none;
     }
 
     .menu-link.active {
         background: #3498db;
+        color: #fff;
+    }
+
+    .menu-link.active:hover {
         color: #fff;
     }
 
@@ -135,6 +179,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         font-weight: 600;
         font-size: 0.9rem;
         margin-bottom: 0.25rem;
+        color: #ecf0f1;
     }
 
     .user-role {
@@ -159,21 +204,38 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
     .logout-btn:hover {
         background: #c0392b;
+        color: #ecf0f1;
+        text-decoration: none;
     }
 
     @media (max-width: 768px) {
         .sidebar {
-            transform: translateX(-100%);
+            left: -250px;
         }
 
         .sidebar.active {
-            transform: translateX(0);
+            left: 0;
+        }
+
+        .content-wrapper {
+            margin-left: 0;
+        }
+
+        .content-wrapper.expanded {
+            margin-left: 0;
+        }
+
+        .hamburger-menu {
+            right: -40px;
         }
     }
 </style>
 
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
     <div class="sidebar-header">
+        <button class="hamburger-menu" id="sidebar-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
         <a href="index.php" class="sidebar-brand">
             <i class="fas fa-car"></i>
             <h3>Arangkada</h3>
@@ -305,4 +367,48 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>Logout</span>
         </a>
     </div>
-</div> 
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const contentWrappers = document.querySelectorAll('.container');
+    
+    // Check for saved state
+    const sidebarState = localStorage.getItem('sidebarCollapsed');
+    if (sidebarState === 'true') {
+        sidebar.classList.add('collapsed');
+        contentWrappers.forEach(wrapper => wrapper.style.marginLeft = '0');
+    }
+
+    sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('collapsed');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        
+        // Save state
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+        
+        // Update content margin
+        contentWrappers.forEach(wrapper => {
+            wrapper.style.marginLeft = isCollapsed ? '0' : '250px';
+        });
+    });
+
+    // Handle responsive behavior
+    function checkWidth() {
+        if (window.innerWidth <= 768) {
+            sidebar.classList.add('collapsed');
+            contentWrappers.forEach(wrapper => wrapper.style.marginLeft = '0');
+        } else {
+            if (localStorage.getItem('sidebarCollapsed') !== 'true') {
+                sidebar.classList.remove('collapsed');
+                contentWrappers.forEach(wrapper => wrapper.style.marginLeft = '250px');
+            }
+        }
+    }
+
+    window.addEventListener('resize', checkWidth);
+    checkWidth(); // Initial check
+});
+</script> 
