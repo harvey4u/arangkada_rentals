@@ -3,17 +3,20 @@ package com.example.arangkada_rentals;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Patterns;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.arangkada_rentals.Dashboard.AdminDashboardActivity;
-import com.example.arangkada_rentals.Dashboard.ClientDashboardActivity;
-import com.example.arangkada_rentals.Dashboard.DriverDashboardActivity;
-import com.example.arangkada_rentals.Dashboard.StaffDashboardActivity;
-import com.example.arangkada_rentals.Dashboard.SuperAdminDashboardActivity;
+import com.example.arangkada_rentals.AdminDashboardActivity;
+import com.example.arangkada_rentals.ClientDashboardActivity;
+//import com.example.arangkada_rentals.DriverDashboardActivity;
+//import com.example.arangkada_rentals.StaffDashboardActivity;
+import com.example.arangkada_rentals.SuperAdminDashboardActivity;
 
 import org.json.JSONObject;
 
@@ -28,37 +31,55 @@ import java.net.URLEncoder;
 
 public class MainActivity extends AppCompatActivity {
 
-    private EditText etEmail, etPassword;
+    private EditText etUsernameEmail, etPassword;
     private Button btnLogin;
+    private ProgressBar progressBar;
+    private TextView tvRegister;
 
-    private static final String LOGIN_URL = "http://192.168.100.45/ARANGKADA/arangkada_rentals/login.php";
+    // Update this to match your server IP address
+    private static final String LOGIN_URL = "http://192.168.100.45/ARANGKADA/arangkada_rentals/api/login.php";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        etEmail = findViewById(R.id.etEmail);
+        etUsernameEmail = findViewById(R.id.etUsernameEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
+        progressBar = findViewById(R.id.progressBar);
+        tvRegister = findViewById(R.id.tvRegister);
 
         btnLogin.setOnClickListener(view -> validateLogin());
+        tvRegister.setOnClickListener(view -> {
+            startActivity(new Intent(MainActivity.this, RegisterActivity.class));
+        });
     }
 
     private void validateLogin() {
-        String email = etEmail.getText().toString().trim();
+        String usernameEmail = etUsernameEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
-        if (email.isEmpty()) {
-            etEmail.setError("Email is required");
-            etEmail.requestFocus();
+        if (usernameEmail.isEmpty()) {
+            etUsernameEmail.setError("Username or Email is required");
+            etUsernameEmail.requestFocus();
             return;
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            etEmail.setError("Enter a valid email");
-            etEmail.requestFocus();
-            return;
+        // If input contains @ symbol, validate as email
+        if (usernameEmail.contains("@")) {
+            if (!Patterns.EMAIL_ADDRESS.matcher(usernameEmail).matches()) {
+                etUsernameEmail.setError("Enter a valid email");
+                etUsernameEmail.requestFocus();
+                return;
+            }
+        } else {
+            // Validate as username
+            if (usernameEmail.length() < 3) {
+                etUsernameEmail.setError("Username must be at least 3 characters");
+                etUsernameEmail.requestFocus();
+                return;
+            }
         }
 
         if (password.isEmpty()) {
@@ -67,10 +88,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        loginUser(email, password);
+        // Show progress bar and disable login button
+        progressBar.setVisibility(View.VISIBLE);
+        btnLogin.setEnabled(false);
+        
+        loginUser(usernameEmail, password);
     }
 
-    private void loginUser(String email, String password) {
+    private void loginUser(String usernameEmail, String password) {
         new Thread(() -> {
             try {
                 URL url = new URL(LOGIN_URL);
@@ -79,7 +104,8 @@ public class MainActivity extends AppCompatActivity {
                 conn.setDoInput(true);
                 conn.setDoOutput(true);
 
-                String postData = "username=" + URLEncoder.encode(email, "UTF-8") +
+                // Send both username and email fields
+                String postData = "username_email=" + URLEncoder.encode(usernameEmail, "UTF-8") +
                         "&password=" + URLEncoder.encode(password, "UTF-8");
 
                 OutputStream os = conn.getOutputStream();
@@ -104,68 +130,66 @@ public class MainActivity extends AppCompatActivity {
 
                 String response = result.toString();
 
-                runOnUiThread(() -> handleLoginResponse(response));
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    btnLogin.setEnabled(true);
+                    handleLoginResponse(response);
+                });
 
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() ->
-                        Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    btnLogin.setEnabled(true);
+                    Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
             }
         }).start();
     }
 
     private void handleLoginResponse(String response) {
-        // Debug log of raw response
-        System.out.println("Server response: " + response);
-
-        if (response == null || response.trim().isEmpty()) {
-            Toast.makeText(this, "Empty response from server", Toast.LENGTH_LONG).show();
-            return;
-        }
-
         try {
             JSONObject jsonObject = new JSONObject(response);
+            String status = jsonObject.getString("status");
+            String message = jsonObject.getString("message");
 
-            String status = jsonObject.optString("status");
-            String role = jsonObject.optString("role");
-            String message = jsonObject.optString("message");
+            if ("success".equals(status)) {
+                JSONObject user = jsonObject.getJSONObject("user");
+                String role = user.getString("role");
 
-            if ("success".equalsIgnoreCase(status)) {
+                // Show success message
                 Toast.makeText(this, "✅ " + message, Toast.LENGTH_SHORT).show();
 
+                // Create intent based on role
                 Intent intent;
                 switch (role.toLowerCase()) {
                     case "superadmin":
-                        intent = new Intent(MainActivity.this, SuperAdminDashboardActivity.class);
+                        intent = new Intent(this, SuperAdminDashboardActivity.class);
                         break;
                     case "admin":
-                        intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
-                        break;
-                    case "staff":
-                        intent = new Intent(MainActivity.this, StaffDashboardActivity.class);
-                        break;
-                    case "driver":
-                        intent = new Intent(MainActivity.this, DriverDashboardActivity.class);
+                        intent = new Intent(this, AdminDashboardActivity.class);
                         break;
                     case "client":
-                    case "customer":
-                        intent = new Intent(MainActivity.this, ClientDashboardActivity.class);
+                        intent = new Intent(this, ClientDashboardActivity.class);
                         break;
                     default:
                         Toast.makeText(this, "Unknown user role: " + role, Toast.LENGTH_LONG).show();
                         return;
                 }
-                startActivity(intent);
-                finish();
 
-            } else if ("verify".equalsIgnoreCase(status) || response.toLowerCase().contains("verify")) {
-                Toast.makeText(this, "⚠️ Please verify your email", Toast.LENGTH_LONG).show();
+                // Pass user data to dashboard
+                intent.putExtra("user_id", user.getString("id"));
+                intent.putExtra("username", user.getString("username"));
+                intent.putExtra("role", role);
+
+                startActivity(intent);
+                finish(); // Close login activity
             } else {
-                Toast.makeText(this, "❌ " + message, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "❌ " + message, Toast.LENGTH_LONG).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Invalid response from server", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Error parsing response: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 }
