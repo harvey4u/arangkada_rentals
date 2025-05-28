@@ -170,19 +170,33 @@ $user_id = $_SESSION['user_id'];
             <div class="row">
                 <?php
                 try {
-                    // Get client's rental statistics
+                    // Get client's rental statistics with corrected column names
                     $stmt = $pdo->prepare("
                         SELECT 
                             COUNT(*) as total_rentals,
                             SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_rentals,
-                            SUM(total_amount) as total_spent
+                            SUM(total_price) as total_spent
                         FROM rentals 
                         WHERE user_id = ?
                     ");
                     $stmt->execute([$user_id]);
                     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    // Initialize stats if null
+                    if (!$stats) {
+                        $stats = [
+                            'total_rentals' => 0,
+                            'active_rentals' => 0,
+                            'total_spent' => 0
+                        ];
+                    }
                 } catch (PDOException $e) {
                     echo "Error fetching statistics: " . $e->getMessage();
+                    $stats = [
+                        'total_rentals' => 0,
+                        'active_rentals' => 0,
+                        'total_spent' => 0
+                    ];
                 }
                 ?>
 
@@ -213,12 +227,13 @@ $user_id = $_SESSION['user_id'];
             <h3>Your Rental History</h3>
             <?php
             try {
+                // Updated query to use correct column names and dates
                 $stmt = $pdo->prepare("
                     SELECT r.*, c.make, c.model
                     FROM rentals r
                     JOIN cars c ON r.car_id = c.id
                     WHERE r.user_id = ?
-                    ORDER BY r.rental_date DESC
+                    ORDER BY r.created_at DESC
                     LIMIT 5
                 ");
                 $stmt->execute([$user_id]);
@@ -228,8 +243,8 @@ $user_id = $_SESSION['user_id'];
                     <thead>
                         <tr>
                             <th>Car</th>
-                            <th>Rental Date</th>
-                            <th>Return Date</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
                             <th>Status</th>
                             <th>Amount</th>
                         </tr>
@@ -238,14 +253,14 @@ $user_id = $_SESSION['user_id'];
                         <?php foreach ($rentals as $rental): ?>
                             <tr>
                                 <td><?= htmlspecialchars($rental['make'] . ' ' . $rental['model']) ?></td>
-                                <td><?= htmlspecialchars($rental['rental_date']) ?></td>
-                                <td><?= htmlspecialchars($rental['return_date']) ?></td>
+                                <td><?= htmlspecialchars($rental['start_date']) ?></td>
+                                <td><?= htmlspecialchars($rental['end_date']) ?></td>
                                 <td>
                                     <span class="status-badge status-<?= strtolower($rental['status']) ?>">
                                         <?= ucfirst(htmlspecialchars($rental['status'])) ?>
                                     </span>
                                 </td>
-                                <td>₱<?= number_format($rental['total_amount'], 2) ?></td>
+                                <td>₱<?= number_format($rental['total_price'], 2) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -270,9 +285,11 @@ $user_id = $_SESSION['user_id'];
                     $cars = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     foreach ($cars as $car):
+                        // Set a default image if none is provided
+                        $imageUrl = $car['image'] ? htmlspecialchars($car['image']) : 'assets/images/default-car.jpg';
                 ?>
                     <div class="car-card">
-                        <img src="<?= htmlspecialchars($car['image_url']) ?>" alt="<?= htmlspecialchars($car['make'] . ' ' . $car['model']) ?>" class="car-image">
+                        <img src="<?= $imageUrl ?>" alt="<?= htmlspecialchars($car['make'] . ' ' . $car['model']) ?>" class="car-image" onerror="this.src='assets/images/default-car.jpg'">
                         <div class="car-details">
                             <div class="car-title"><?= htmlspecialchars($car['make'] . ' ' . $car['model']) ?></div>
                             <div class="car-price">₱<?= number_format($car['price_per_day'], 2) ?> per day</div>
