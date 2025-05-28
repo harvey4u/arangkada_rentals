@@ -9,6 +9,8 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 <style>
     :root {
         --primary: #3498db;
@@ -23,6 +25,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
         --gray-dark: #7f8c8d;
         --success: #2ecc71;
         --warning: #f1c40f;
+        
+        /* Font variables */
+        --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
     .sidebar {
@@ -35,21 +40,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
         color: var(--light);
         transition: all 0.3s ease;
         z-index: 1000;
-        overflow-y: auto;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        font-family: var(--font-primary);
     }
 
     .sidebar-header {
-        padding: 1.5rem;
-        text-align: center;
+        padding: 0.8rem;
         background: var(--darker);
         border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .sidebar-header h3 {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 600;
     }
 
     .sidebar-brand {
@@ -59,22 +58,44 @@ $current_page = basename($_SERVER['PHP_SELF']);
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        transition: all 0.3s ease;
     }
 
     .sidebar-brand:hover {
         color: var(--primary);
-        text-decoration: none;
+    }
+
+    .sidebar-brand h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
     }
 
     .menu-items {
-        padding: 1rem 0;
+        padding: 0.5rem 0;
         list-style: none;
         margin: 0;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .menu-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 0.8rem 0.8rem;
+    }
+
+    .menu-header {
+        color: var(--gray);
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.0625rem;
+        padding: 0.5rem 1.2rem 0.3rem;
+        font-weight: 600;
     }
 
     .menu-item {
-        padding: 0.5rem 1.5rem;
+        padding: 0.15rem 0.8rem;
     }
 
     .menu-link {
@@ -82,55 +103,49 @@ $current_page = basename($_SERVER['PHP_SELF']);
         text-decoration: none;
         display: flex;
         align-items: center;
-        padding: 0.75rem 1rem;
-        border-radius: 0.5rem;
+        padding: 0.5rem 0.8rem;
+        border-radius: 0.3rem;
         transition: all 0.3s ease;
-        gap: 0.75rem;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 
     .menu-link:hover {
         background: rgba(52, 152, 219, 0.1);
         color: var(--primary);
-        text-decoration: none;
     }
 
     .menu-link.active {
         background: var(--primary);
         color: white;
-    }
-
-    .menu-link.active:hover {
-        background: var(--primary-dark);
-        color: white;
-    }
-
-    .menu-link i {
-        width: 20px;
-        text-align: center;
-        font-size: 1.1rem;
-        transition: all 0.3s ease;
-    }
-
-    .menu-header {
-        color: var(--gray);
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        padding: 1.5rem 1.5rem 0.5rem;
         font-weight: 600;
     }
 
-    .menu-divider {
-        height: 1px;
-        background: #34495e;
-        margin: 1rem 1.5rem;
+    .menu-link i {
+        width: 16px;
+        text-align: center;
+        font-size: 0.9375rem;
     }
 
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        margin-left: auto;
+        letter-spacing: 0.02em;
+    }
+
+    .primary-badge { background: var(--primary); color: white; }
+    .danger-badge { background: var(--danger); color: white; }
+    .warning-badge { background: var(--warning); color: var(--dark); }
+
     .user-info {
-        position: sticky;
-        bottom: 0;
-        width: 100%;
-        padding: 1rem 1.5rem;
+        padding: 0.8rem;
         background: var(--darker);
         border-top: 1px solid rgba(255,255,255,0.1);
     }
@@ -138,23 +153,23 @@ $current_page = basename($_SERVER['PHP_SELF']);
     .user-info-content {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.8rem;
+        margin-bottom: 0.8rem;
     }
 
     .user-avatar {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         background: var(--primary);
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
     }
 
     .user-avatar i {
         color: white;
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 
     .user-details {
@@ -163,28 +178,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
     .user-name {
         font-weight: 600;
-        font-size: 0.9rem;
-        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
         color: var(--light);
+        letter-spacing: -0.01em;
     }
 
     .user-role {
-        font-size: 0.8rem;
-        color: var(--gray);
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.25rem 0.5rem;
         font-size: 0.75rem;
-        font-weight: 600;
-        border-radius: 9999px;
-        background: var(--danger);
-        color: white;
-        min-width: 1.5rem;
-        transition: all 0.3s ease;
+        color: var(--gray);
+        font-weight: 500;
     }
 
     .logout-btn {
@@ -192,33 +194,46 @@ $current_page = basename($_SERVER['PHP_SELF']);
         align-items: center;
         gap: 0.5rem;
         color: var(--light);
-        text-decoration: none;
         padding: 0.5rem;
-        border-radius: 0.5rem;
-        font-size: 0.9rem;
-        margin-top: 0.5rem;
+        border-radius: 0.3rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
         background: var(--danger);
-        transition: all 0.3s ease;
-        justify-content: center;
         border: none;
         width: 100%;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
 
     .logout-btn:hover {
         background: var(--danger-dark);
-        color: white;
-        text-decoration: none;
+    }
+
+    .menu-items::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .menu-items::-webkit-scrollbar-track {
+        background: var(--darker);
+    }
+
+    .menu-items::-webkit-scrollbar-thumb {
+        background: var(--gray);
+        border-radius: 4px;
+    }
+
+    .menu-items::-webkit-scrollbar-thumb:hover {
+        background: var(--gray-dark);
     }
 
     @media (max-width: 768px) {
         .sidebar {
             transform: translateX(-100%);
-            box-shadow: none;
         }
 
         .sidebar.active {
             transform: translateX(0);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
     }
 </style>

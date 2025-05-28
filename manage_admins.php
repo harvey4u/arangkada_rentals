@@ -11,32 +11,78 @@ require 'db.php';
 
 // Handle admin creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
-    $username = $_POST['username'];
-    $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
     
-    try {
-        $pdo->beginTransaction();
-        
-        // Insert user
-        $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-        $stmt->execute([$username, $email, $password]);
-        $user_id = $pdo->lastInsertId();
-        
-        // Get admin role ID
-        $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'admin'");
-        $stmt->execute();
-        $role_id = $stmt->fetchColumn();
-        
-        // Assign admin role
-        $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-        $stmt->execute([$user_id, $role_id]);
-        
-        $pdo->commit();
-        $success_message = "Admin created successfully!";
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        $error_message = "Error creating admin: " . $e->getMessage();
+    // Validate input
+    $errors = [];
+    
+    // Check username
+    if (empty($username)) {
+        $errors[] = "Username is required";
+    } else {
+        // Check if username already exists
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        if ($stmt->fetchColumn() > 0) {
+            $errors[] = "Username '$username' is already taken. Please choose a different username.";
+        }
+    }
+    
+    // Check email
+    if (empty($email)) {
+        $errors[] = "Email is required";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid email format";
+    } else {
+        // Check if email already exists
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        if ($stmt->fetchColumn() > 0) {
+            $errors[] = "Email address is already registered";
+        }
+    }
+    
+    // Check password
+    if (empty($password)) {
+        $errors[] = "Password is required";
+    } elseif (strlen($password) < 6) {
+        $errors[] = "Password must be at least 6 characters long";
+    }
+    
+    // If no errors, proceed with admin creation
+    if (empty($errors)) {
+        try {
+            $pdo->beginTransaction();
+            
+            // Insert user
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO users (username, email, password, is_verified) VALUES (?, ?, ?, 1)");
+            $stmt->execute([$username, $email, $hashedPassword]);
+            $user_id = $pdo->lastInsertId();
+            
+            // Get admin role ID
+            $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'admin'");
+            $stmt->execute();
+            $role_id = $stmt->fetchColumn();
+            
+            // Assign admin role
+            $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+            $stmt->execute([$user_id, $role_id]);
+            
+            $pdo->commit();
+            $success_message = "Administrator account created successfully!";
+            
+            // Clear form data after successful creation
+            unset($_POST['username'], $_POST['email'], $_POST['password']);
+            
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            $error_message = "Database error: " . $e->getMessage();
+        }
+    } else {
+        $error_message = implode("<br>", $errors);
     }
 }
 
@@ -374,24 +420,43 @@ $admins = $stmt->fetchAll();
                 <h3 class="modal-title">Add New Administrator</h3>
             </div>
             <form method="POST">
-                <div class="form-group">
-                    <label class="form-label" for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" required>
+                <?php if (isset($error_message)): ?>
+                    <div class="alert alert-danger mx-3 mt-3">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <?php echo $error_message; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (isset($success_message)): ?>
+                    <div class="alert alert-success mx-3 mt-3">
+                        <i class="fas fa-check-circle"></i>
+                        <?php echo $success_message; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" 
+                               value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-control" 
+                               value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" required>
+                        <small class="text-muted">Password must be at least 6 characters long</small>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <input type="email" id="email" name="email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
-                </div>
-                <div class="form-group">
+                <div class="modal-footer">
                     <button type="submit" name="create_admin" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Create Administrator
                     </button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal()">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">
                         <i class="fas fa-times"></i>
                         Cancel
                     </button>
@@ -403,6 +468,9 @@ $admins = $stmt->fetchAll();
     <script>
         function openModal() {
             document.getElementById('addAdminModal').classList.add('active');
+            // Clear previous error messages when opening modal
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => alert.remove());
         }
 
         function closeModal() {
@@ -415,6 +483,13 @@ $admins = $stmt->fetchAll();
             }
         }
 
+        // Show modal if there are errors
+        <?php if (isset($error_message) || isset($success_message)): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            openModal();
+        });
+        <?php endif; ?>
+
         // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('addAdminModal');
@@ -423,14 +498,17 @@ $admins = $stmt->fetchAll();
             }
         }
 
-        // Auto-hide alerts after 5 seconds
+        // Auto-hide success messages after 5 seconds
         document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
+            const successAlerts = document.querySelectorAll('.alert-success');
+            successAlerts.forEach(alert => {
                 setTimeout(() => {
                     alert.style.opacity = '0';
                     alert.style.transform = 'translateY(-10px)';
-                    setTimeout(() => alert.remove(), 300);
+                    setTimeout(() => {
+                        alert.remove();
+                        closeModal(); // Close modal after success message disappears
+                    }, 300);
                 }, 5000);
             });
         });

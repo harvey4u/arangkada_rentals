@@ -1,277 +1,360 @@
 <?php
-// Include your DB connection file
-require_once 'db.php';
 session_start();
 
-// Ensure user is logged in and is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+// Check if user is logged in and is admin
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header('Location: login.php');
     exit;
 }
+
+// Include your DB connection file
+require_once 'db.php';
+
+// Get admin info
+$admin_id = $_SESSION['user_id'];
+$stmt = $pdo->prepare("SELECT username, email FROM users WHERE id = ?");
+$stmt->execute([$admin_id]);
+$admin = $stmt->fetch();
+
+// Get current month and year for statistics
+$currentMonth = date('m');
+$currentYear = date('Y');
+
+try {
+    // Get monthly revenue data from view
+    $stmt = $pdo->query("SELECT * FROM monthly_revenue_view ORDER BY month DESC LIMIT 1");
+    $monthlyRevenue = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Get car performance data
+    $stmt = $pdo->query("SELECT * FROM car_performance_view");
+    $carPerformance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get driver performance data
+    $stmt = $pdo->query("SELECT * FROM driver_performance_view");
+    $driverPerformance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get user counts by role
+    $stmt = $pdo->query("
+        SELECT r.name, COUNT(ur.user_id) as count
+        FROM roles r
+        LEFT JOIN user_roles ur ON r.id = ur.role_id
+        GROUP BY r.name
+    ");
+    $userCounts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Get car statistics
+    $stmt = $pdo->query("
+        SELECT 
+            COUNT(*) as total_cars,
+            SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_cars,
+            SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) as rented_cars,
+            SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_cars
+        FROM cars
+    ");
+    $carStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Get maintenance requests count
+    $stmt = $pdo->query("
+        SELECT COUNT(*) as pending_maintenance
+        FROM maintenance_requests 
+        WHERE status = 'pending'
+    ");
+    $maintenanceCount = $stmt->fetchColumn();
+
+    // Get support tickets count
+    $stmt = $pdo->query("
+        SELECT COUNT(*) as open_tickets
+        FROM support_tickets 
+        WHERE status = 'open'
+    ");
+    $openTickets = $stmt->fetchColumn();
+
+} catch (PDOException $e) {
+    error_log("Error fetching dashboard data: " . $e->getMessage());
+}
 ?>
 
-<?php include 'header.php'; ?>
-<?php include 'navbar.php'; ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Arangkada</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
+            --danger-color: #e74c3c;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --background-light: #f8f9fa;
+        }
 
-<!-- Main Layout -->
-<style>
-    :root {
-        --primary-color: #3498db;
-        --secondary-color: #2980b9;
-        --success-color: #2ecc71;
-        --warning-color: #f1c40f;
-        --danger-color: #e74c3c;
-        --text-dark: #2c3e50;
-        --text-light: #7f8c8d;
-        --background-light: #f8f9fa;
-    }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--background-light);
+            color: var(--text-dark);
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
 
-    .container {
-        display: flex;
-        background-color: #f5f6fa;
-        min-height: 100vh;
-    }
+        /* Main container styles */
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
 
-    .main-content {
-        flex: 1;
-        padding: 2rem;
-        margin: 1rem;
-        background-color: white;
-        border-radius: 15px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    }
+        .main-content {
+            flex: 1;
+            margin-left: 250px; /* Match sidebar width */
+            padding: 2rem;
+            background-color: var(--background-light);
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
 
-    .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #eee;
-    }
+        /* Dashboard specific styles */
+        .dashboard-header {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .dashboard-title {
-        font-size: 1.8rem;
-        color: var(--text-dark);
-        font-weight: 600;
-    }
+        .dashboard-title {
+            font-size: 1.8rem;
+            color: var(--text-dark);
+            font-weight: 600;
+            margin: 0;
+        }
 
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
+        .welcome-message {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 0;
+        }
 
-    .card-box {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-    }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
 
-    .card-box:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
+        .card-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
 
-    .card-box h3 {
-        color: var(--text-light);
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.5rem;
-    }
+        .card-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
 
-    .card-box span {
-        font-size: 1.8rem;
-        font-weight: 600;
-        color: var(--text-dark);
-        display: block;
-    }
+        .card-box h3 {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
 
-    .card-box .trend {
-        font-size: 0.85rem;
-        color: var(--success-color);
-        margin-top: 0.5rem;
-    }
+        .card-box span {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: block;
+        }
 
-    .section-title {
-        font-size: 1.2rem;
-        color: var(--text-dark);
-        margin: 2rem 0 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #eee;
-    }
+        .trend {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
 
-    /* Table styling */
-    .table-responsive {
-        overflow-x: auto;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    }
+        .trend-up { color: var(--success-color); }
+        .trend-down { color: var(--danger-color); }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1rem 0;
-    }
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--text-dark);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+        }
 
-    th, td {
-        padding: 1rem;
-        text-align: left;
-        border-bottom: 1px solid #eee;
-    }
+        /* Table styles */
+        .table-responsive {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
 
-    th {
-        background-color: var(--background-light);
-        color: var(--text-dark);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 0.5px;
-    }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
 
-    tr:hover {
-        background-color: #f8f9fa;
-    }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
 
-    .status-badge {
-        padding: 0.4rem 0.8rem;
-        border-radius: 50px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
+        th {
+            background: var(--background-light);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-    .status-active {
-        background-color: rgba(46, 204, 113, 0.1);
-        color: var(--success-color);
-    }
+        tr:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
 
-    .status-pending {
-        background-color: rgba(241, 196, 15, 0.1);
-        color: var(--warning-color);
-    }
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
 
-    .status-cancelled {
-        background-color: rgba(231, 76, 60, 0.1);
-        color: var(--danger-color);
-    }
+        .status-active { background-color: rgba(46, 204, 113, 0.1); color: var(--success-color); }
+        .status-pending { background-color: rgba(241, 196, 15, 0.1); color: var(--warning-color); }
+        .status-cancelled { background-color: rgba(231, 76, 60, 0.1); color: var(--danger-color); }
 
-    .amount {
-        font-weight: 600;
-        color: var(--text-dark);
-    }
+        .amount {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
 
-    /* Card colors */
-    .card-primary { border-left: 4px solid var(--primary-color); }
-    .card-success { border-left: 4px solid var(--success-color); }
-    .card-warning { border-left: 4px solid var(--warning-color); }
-    .card-danger { border-left: 4px solid var(--danger-color); }
-</style>
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
 
-<div class="container">
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
     <?php include 'sidebar_admin.php'; ?>
 
     <main class="main-content">
         <div class="dashboard-header">
-            <h2 class="dashboard-title">Admin Control Panel</h2>
+            <div>
+                <h2 class="dashboard-title">Admin Dashboard</h2>
+                <p class="welcome-message">Welcome back, <?= htmlspecialchars($admin['username']) ?>!</p>
+            </div>
             <div class="date"><?= date('F d, Y') ?></div>
         </div>
 
         <div class="stats-grid">
-            <?php
-            try {
-                // Count users by role
-                $stmt = $pdo->query("SELECT COUNT(*) FROM user_roles WHERE role_id = 2"); // Admin
-                $adminCount = $stmt->fetchColumn();
-                
-                $stmt = $pdo->query("SELECT COUNT(*) FROM user_roles WHERE role_id = 3"); // Staff
-                $staffCount = $stmt->fetchColumn();
-                
-                $stmt = $pdo->query("SELECT COUNT(*) FROM user_roles WHERE role_id = 4"); // Clients
-                $clientCount = $stmt->fetchColumn();
-                
-                $stmt = $pdo->query("SELECT COUNT(*) FROM user_roles WHERE role_id = 5"); // Drivers
-                $driverCount = $stmt->fetchColumn();
-                
-                // Count cars
-                $stmt = $pdo->query("SELECT COUNT(*) FROM cars");
-                $totalCars = $stmt->fetchColumn();
-                
-                $stmt = $pdo->query("SELECT COUNT(*) FROM cars WHERE status = 'available'");
-                $availableCars = $stmt->fetchColumn();
-                
-                $stmt = $pdo->query("SELECT COUNT(*) FROM cars WHERE status = 'rented'");
-                $rentedCars = $stmt->fetchColumn();
-
-                // Count total rentals and revenue
-                $stmt = $pdo->query("SELECT COUNT(*) as total_rentals, SUM(total_amount) as total_revenue FROM rentals");
-                $rentalStats = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-            } catch (PDOException $e) {
-                echo "Error fetching statistics: " . $e->getMessage();
-            }
-            ?>
-
+            <!-- User Statistics -->
             <div class="card-box card-primary">
-                <h3>Total Staff</h3>
-                <span><?= $staffCount ?></span>
-                <div class="trend">↑ 12% from last month</div>
-            </div>
-
-            <div class="card-box card-success">
                 <h3>Total Clients</h3>
-                <span><?= $clientCount ?></span>
-                <div class="trend">↑ 8% from last month</div>
-            </div>
-
-            <div class="card-box card-warning">
-                <h3>Total Drivers</h3>
-                <span><?= $driverCount ?></span>
-                <div class="trend">↑ 5% from last month</div>
-            </div>
-
-            <div class="card-box card-primary">
-                <h3>Total Cars</h3>
-                <span><?= $totalCars ?></span>
+                <span><?= $userCounts['client'] ?? 0 ?></span>
+                <div class="trend">
+                    <i class="fas fa-users"></i> Active Users
+                </div>
             </div>
 
             <div class="card-box card-success">
-                <h3>Available Cars</h3>
-                <span><?= $availableCars ?></span>
+                <h3>Active Drivers</h3>
+                <span><?= $userCounts['driver'] ?? 0 ?></span>
+                <div class="trend">
+                    <i class="fas fa-id-card"></i> Available for Hire
+                </div>
             </div>
 
             <div class="card-box card-warning">
-                <h3>Rented Cars</h3>
-                <span><?= $rentedCars ?></span>
+                <h3>Staff Members</h3>
+                <span><?= $userCounts['staff'] ?? 0 ?></span>
+                <div class="trend">
+                    <i class="fas fa-user-tie"></i> Support Team
+                </div>
             </div>
 
-            <div class="card-box card-primary">
-                <h3>Total Rentals</h3>
-                <span><?= $rentalStats['total_rentals'] ?? 0 ?></span>
+            <!-- Car Statistics -->
+            <div class="card-box card-info">
+                <h3>Fleet Status</h3>
+                <span><?= $carStats['total_cars'] ?? 0 ?></span>
+                <div class="trend">
+                    Available: <?= $carStats['available_cars'] ?? 0 ?> | 
+                    Rented: <?= $carStats['rented_cars'] ?? 0 ?> |
+                    Maintenance: <?= $carStats['maintenance_cars'] ?? 0 ?>
+                </div>
             </div>
 
+            <!-- Revenue Statistics -->
             <div class="card-box card-success">
-                <h3>Total Revenue</h3>
-                <span>₱<?= number_format($rentalStats['total_revenue'] ?? 0, 2) ?></span>
-                <div class="trend">↑ 15% from last month</div>
+                <h3>Monthly Revenue</h3>
+                <span>₱<?= number_format($monthlyRevenue['total_revenue'] ?? 0, 2) ?></span>
+                <div class="trend">
+                    <i class="fas fa-chart-line"></i> 
+                    <?= $monthlyRevenue['total_rentals'] ?? 0 ?> rentals this month
+                </div>
+            </div>
+
+            <!-- Support Statistics -->
+            <div class="card-box card-danger">
+                <h3>Pending Tasks</h3>
+                <span><?= $maintenanceCount + $openTickets ?></span>
+                <div class="trend">
+                    <i class="fas fa-tools"></i> <?= $maintenanceCount ?> maintenance
+                    <i class="fas fa-ticket-alt ml-2"></i> <?= $openTickets ?> tickets
+                </div>
             </div>
         </div>
 
+        <!-- Recent Rentals -->
         <h3 class="section-title">Recent Rentals</h3>
         <div class="table-responsive">
             <?php
             try {
                 $stmt = $pdo->query("
-                    SELECT r.*, u.username, c.make, c.model 
+                    SELECT 
+                        r.*,
+                        u.username as client_name,
+                        c.make,
+                        c.model,
+                        d.username as driver_name,
+                        cc.name as car_category
                     FROM rentals r
-                    JOIN users u ON r.user_id = u.id
+                    JOIN users u ON r.client_id = u.id
                     JOIN cars c ON r.car_id = c.id
-                    ORDER BY r.rental_date DESC
+                    LEFT JOIN users d ON r.driver_id = d.id
+                    LEFT JOIN car_categories cc ON c.category_id = cc.id
+                    ORDER BY r.created_at DESC
                     LIMIT 5
                 ");
                 $recentRentals = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -281,8 +364,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                         <tr>
                             <th>Client</th>
                             <th>Car</th>
-                            <th>Rental Date</th>
-                            <th>Return Date</th>
+                            <th>Category</th>
+                            <th>Driver</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
                             <th>Status</th>
                             <th>Amount</th>
                         </tr>
@@ -290,27 +375,32 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                     <tbody>
                         <?php foreach ($recentRentals as $rental): ?>
                             <tr>
-                                <td><?= htmlspecialchars($rental['username']) ?></td>
+                                <td><?= htmlspecialchars($rental['client_name']) ?></td>
                                 <td><?= htmlspecialchars($rental['make'] . ' ' . $rental['model']) ?></td>
-                                <td><?= date('M d, Y', strtotime($rental['rental_date'])) ?></td>
-                                <td><?= date('M d, Y', strtotime($rental['return_date'])) ?></td>
+                                <td><?= htmlspecialchars($rental['car_category']) ?></td>
+                                <td><?= $rental['driver_name'] ? htmlspecialchars($rental['driver_name']) : 'No Driver' ?></td>
+                                <td><?= date('M d, Y', strtotime($rental['start_date'])) ?></td>
+                                <td><?= date('M d, Y', strtotime($rental['end_date'])) ?></td>
                                 <td>
                                     <span class="status-badge status-<?= strtolower($rental['status']) ?>">
                                         <?= ucfirst(htmlspecialchars($rental['status'])) ?>
                                     </span>
                                 </td>
-                                <td class="amount">₱<?= number_format($rental['total_amount'], 2) ?></td>
+                                <td class="amount">₱<?= number_format($rental['total_price'], 2) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             <?php
             } catch (PDOException $e) {
-                echo "Error fetching recent rentals: " . $e->getMessage();
+                error_log("Error fetching recent rentals: " . $e->getMessage());
+                echo "<p class='text-danger'>Unable to load recent rentals.</p>";
             }
             ?>
         </div>
     </main>
 </div>
 
-<?php include 'footer.php'; ?> 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
