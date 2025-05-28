@@ -38,7 +38,7 @@ public class RegisterActivity extends AppCompatActivity {
     private TextView tvLogin;
 
     private static final String TAG = "RegisterActivity";
-    private static final String REGISTER_URL = "http://10.0.2.2/ARANGKADA/arangkada_rentals/api/register.php";
+    private static final String REGISTER_URL = "http://192.168.100.45/ARANGKADA/arangkada_rentals/api/register.php";
     private static final int CONNECTION_TIMEOUT = 30000; // 30 seconds
     private static final int READ_TIMEOUT = 30000; // 30 seconds
 
@@ -93,7 +93,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void validateForm() {
-        // Get form data
+        // Get form data and trim whitespace
         String username = etUsername.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
@@ -106,13 +106,15 @@ public class RegisterActivity extends AppCompatActivity {
         etPassword.setError(null);
         etConfirmPassword.setError(null);
 
-        // Log form data (remove in production)
+        // Log validation attempt
         android.util.Log.d(TAG, "Validating form data:");
-        android.util.Log.d(TAG, "Username: " + username);
-        android.util.Log.d(TAG, "Email: " + email);
+        android.util.Log.d(TAG, "Username: " + (username.isEmpty() ? "empty" : "provided"));
+        android.util.Log.d(TAG, "Email: " + (email.isEmpty() ? "empty" : "provided"));
+        android.util.Log.d(TAG, "Password: " + (password.isEmpty() ? "empty" : "provided"));
+        android.util.Log.d(TAG, "Confirm Password: " + (confirmPassword.isEmpty() ? "empty" : "provided"));
         android.util.Log.d(TAG, "Role: " + role);
 
-        // Validate username
+        // Check for empty fields
         if (username.isEmpty()) {
             etUsername.setError("Username is required");
             etUsername.requestFocus();
@@ -125,7 +127,6 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // Validate email
         if (email.isEmpty()) {
             etEmail.setError("Email is required");
             etEmail.requestFocus();
@@ -138,7 +139,6 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // Validate password
         if (password.isEmpty()) {
             etPassword.setError("Password is required");
             etPassword.requestFocus();
@@ -151,7 +151,6 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // Validate confirm password
         if (confirmPassword.isEmpty()) {
             etConfirmPassword.setError("Please confirm your password");
             etConfirmPassword.requestFocus();
@@ -164,10 +163,16 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
+        // Double check that no field is empty before proceeding
+        if (username.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || role.isEmpty()) {
+            showErrorDialog("Validation Error", "All fields are required");
+            return;
+        }
+
         // Show progress and disable button
         setLoading(true);
 
-        // Log that validation passed
+        // Log successful validation
         android.util.Log.d(TAG, "Form validation passed, proceeding with registration");
 
         // Proceed with registration
@@ -188,6 +193,10 @@ public class RegisterActivity extends AppCompatActivity {
         new Thread(() -> {
             HttpURLConnection conn = null;
             try {
+                // Log network attempt
+                android.util.Log.d(TAG, "Starting registration process...");
+                android.util.Log.d(TAG, "Connecting to: " + REGISTER_URL);
+
                 URL url = new URL(REGISTER_URL);
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
@@ -198,10 +207,7 @@ public class RegisterActivity extends AppCompatActivity {
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 conn.setRequestProperty("Accept", "application/json");
 
-                // Log connection attempt
-                android.util.Log.d(TAG, "Attempting to connect to: " + REGISTER_URL);
-
-                // Create the POST data string
+                // Create the POST data string with URL encoding
                 StringBuilder postDataBuilder = new StringBuilder();
                 postDataBuilder.append(URLEncoder.encode("username", "UTF-8"))
                     .append("=")
@@ -219,16 +225,21 @@ public class RegisterActivity extends AppCompatActivity {
                     .append("=")
                     .append(URLEncoder.encode(role, "UTF-8"));
 
+
                 String postData = postDataBuilder.toString();
 
-                // Log post data (remove in production)
-                android.util.Log.d(TAG, "Post data: " + postData);
+                // Log request details
+                android.util.Log.d(TAG, "Request Headers:");
+                android.util.Log.d(TAG, "Content-Type: " + conn.getRequestProperty("Content-Type"));
+                android.util.Log.d(TAG, "Accept: " + conn.getRequestProperty("Accept"));
+                android.util.Log.d(TAG, "Post data being sent: " + postData);
 
-                // Write the POST data to the connection
+                // Write the POST data
                 try (OutputStream os = conn.getOutputStream();
                      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"))) {
                     writer.write(postData);
                     writer.flush();
+                    android.util.Log.d(TAG, "Successfully wrote POST data");
                 }
 
                 int responseCode = conn.getResponseCode();
@@ -244,33 +255,20 @@ public class RegisterActivity extends AppCompatActivity {
                 }
 
                 String response = result.toString();
-                android.util.Log.d(TAG, "Server response: " + response);
+                android.util.Log.d(TAG, "Complete server response: " + response);
 
                 runOnUiThread(() -> {
                     setLoading(false);
                     handleRegisterResponse(response, email);
                 });
 
-            } catch (java.net.SocketTimeoutException e) {
-                android.util.Log.e(TAG, "Connection timeout: " + e.getMessage());
-                runOnUiThread(() -> {
-                    setLoading(false);
-                    showErrorDialog("Connection Timeout", 
-                        "The server is taking too long to respond. Please try again later.");
-                });
-            } catch (java.net.UnknownHostException e) {
-                android.util.Log.e(TAG, "Unknown host: " + e.getMessage());
-                runOnUiThread(() -> {
-                    setLoading(false);
-                    showErrorDialog("Server Not Found", 
-                        "Could not find the server. Please check your internet connection and try again.");
-                });
             } catch (Exception e) {
-                android.util.Log.e(TAG, "Error during registration: " + e.getMessage(), e);
+                android.util.Log.e(TAG, "Error during registration: " + e.getMessage());
+                android.util.Log.e(TAG, "Stack trace:", e);
                 runOnUiThread(() -> {
                     setLoading(false);
                     showErrorDialog("Registration Failed", 
-                        "Error: " + e.getMessage() + "\nPlease try again later.");
+                        "Error: " + e.getMessage() + "\n\nPlease try again.");
                 });
             } finally {
                 if (conn != null) {
@@ -288,7 +286,29 @@ public class RegisterActivity extends AppCompatActivity {
             String message = jsonObject.getString("message");
 
             if ("success".equals(status)) {
-                showVerificationDialog(email);
+                String userId = jsonObject.optString("user_id", "");
+                String role = rbAdmin.isChecked() ? "admin" : "client";
+                String username = etUsername.getText().toString().trim();
+
+                // Start appropriate activity based on role
+                Intent intent;
+                if ("admin".equals(role)) {
+                    intent = new Intent(RegisterActivity.this, AdminDashboardActivity.class);
+                } else {
+                    intent = new Intent(RegisterActivity.this, ClientDashboardActivity.class);
+                }
+                
+                intent.putExtra("USER_ID", userId);
+                intent.putExtra("USERNAME", username);
+                intent.putExtra("ROLE", role);
+                startActivity(intent);
+                
+                // Show success message
+                Toast.makeText(RegisterActivity.this, 
+                    message, 
+                    Toast.LENGTH_SHORT).show();
+                
+                finish(); // Close registration activity
             } else {
                 showErrorDialog("Registration Failed", message);
             }
@@ -296,38 +316,6 @@ public class RegisterActivity extends AppCompatActivity {
             android.util.Log.e(TAG, "Error parsing response: " + e.getMessage(), e);
             showErrorDialog("Error", "Could not process server response. Please try again.");
         }
-    }
-
-    private void showVerificationDialog(String email) {
-        new AlertDialog.Builder(this)
-            .setTitle("✉️ Check Your Email!")
-            .setMessage("We've sent a verification email to " + email + ".\n\n" +
-                       "Please check your email and click the verification link to complete your registration.\n\n" +
-                       "Important Notes:\n" +
-                       "• The verification link will expire in 24 hours\n" +
-                       "• Check your spam folder if you don't see the email\n" +
-                       "• Make sure to verify your email before logging in")
-            .setPositiveButton("Open Email App", (dialog, which) -> {
-                // Try to open email app
-                Intent intent = new Intent(Intent.ACTION_MAIN);
-                intent.addCategory(Intent.CATEGORY_APP_EMAIL);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                try {
-                    startActivity(intent);
-                } catch (android.content.ActivityNotFoundException ex) {
-                    Toast.makeText(this, "No email app found.", Toast.LENGTH_SHORT).show();
-                } finally {
-                    // Return to login screen
-                    startActivity(new Intent(RegisterActivity.this, MainActivity.class));
-                    finish();
-                }
-            })
-            .setNegativeButton("Later", (dialog, which) -> {
-                startActivity(new Intent(RegisterActivity.this, MainActivity.class));
-                finish();
-            })
-            .setCancelable(false)
-            .show();
     }
 
     private void showErrorDialog(String title, String message) {

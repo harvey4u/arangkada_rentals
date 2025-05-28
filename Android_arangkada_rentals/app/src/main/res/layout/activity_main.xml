@@ -1,41 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:scrollbars="none"
+    android:background="@android:color/white">
+
     <androidx.constraintlayout.widget.ConstraintLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
         android:id="@+id/loginLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@android:color/white"
+        android:layout_height="wrap_content"
         android:padding="24dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
         tools:context="com.example.arangkada_rentals.MainActivity">
 
         <!-- App Logo -->
-    <ImageView
-        android:id="@+id/logoImage"
-        android:layout_width="271dp"
-        android:layout_height="236dp"
-        android:layout_marginTop="24dp"
-        android:contentDescription="@string/app_logo"
-        android:scaleType="fitCenter"
-        android:src="@drawable/arangkada"
-        app:layout_constraintBottom_toTopOf="@id/etUsernameEmail"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <ImageView
+            android:id="@+id/logoImage"
+            android:layout_width="200dp"
+            android:layout_height="120dp"
+            android:layout_marginTop="24dp"
+            android:contentDescription="@string/app_logo"
+            android:scaleType="fitCenter"
+            android:src="@drawable/arangkada"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- Username/Email Input -->
         <EditText
             android:id="@+id/etUsernameEmail"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="48dp"
             android:background="@drawable/edit_text_background"
             android:drawableStart="@android:drawable/ic_menu_myplaces"
             android:drawablePadding="12dp"
             android:hint="Username or Email"
             android:inputType="textEmailAddress"
+            android:imeOptions="actionNext"
+            android:nextFocusDown="@id/etPassword"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -53,6 +62,7 @@
             android:drawablePadding="12dp"
             android:hint="Password"
             android:inputType="textPassword"
+            android:imeOptions="actionDone"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -64,7 +74,7 @@
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -76,10 +86,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:background="@drawable/button_background"
+            android:backgroundTint="#0D47A1"
+            android:minHeight="48dp"
             android:text="Login"
             android:textAllCaps="false"
-            android:textColor="@android:color/white"
+            android:textColor="#FFFFFF"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -91,11 +102,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
             android:text="Don't have an account? Register"
-            android:textColor="@android:color/holo_blue_dark"
+            android:textColor="#0D47A1"
             android:textSize="16sp"
+            android:padding="8dp"
+            android:clickable="true"
+            android:focusable="true"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btnLogin" />
+            app:layout_constraintTop_toBottomOf="@id/btnLogin"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

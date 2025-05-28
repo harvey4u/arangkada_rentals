@@ -25,7 +25,7 @@ public class VerificationActivity extends AppCompatActivity {
     private Button btnResendEmail, btnProceedToLogin;
     private ProgressBar progressBar;
     private String email;
-    private static final String RESEND_VERIFICATION_URL = "http://10.0.2.2/ARANGKADA/arangkada_rentals/api/resend_verification.php";
+    private static final String RESEND_VERIFICATION_URL = "http://192.168.100.45/ARANGKADA/arangkada_rentals/api/resend_verification.php";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
