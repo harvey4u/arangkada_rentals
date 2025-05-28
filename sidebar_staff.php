@@ -7,64 +7,112 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'staff') {
 ?>
 
 <style>
+    :root {
+        --primary: #3498db;
+        --primary-dark: #2980b9;
+        --secondary: #2ecc71;
+        --dark: #2c3e50;
+        --darker: #243342;
+        --light: #ecf0f1;
+        --danger: #e74c3c;
+        --danger-dark: #c0392b;
+        --gray: #95a5a6;
+        --gray-dark: #7f8c8d;
+        --success: #2ecc71;
+        --warning: #f1c40f;
+    }
+
     .sidebar {
+        background: var(--dark);
         width: 250px;
-        background: #2c3e50;
-        padding: 20px;
-        min-height: 100vh;
-        color: white;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        color: var(--light);
         transition: all 0.3s ease;
+        z-index: 1000;
+        overflow-y: auto;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     }
 
     .sidebar-header {
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 20px;
+        padding: 1.5rem;
+        text-align: center;
+        background: var(--darker);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
     }
 
     .sidebar-header h3 {
-        color: white;
         margin: 0;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         font-weight: 600;
+        color: var(--light);
     }
 
     .sidebar-menu {
         list-style: none;
-        padding: 0;
+        padding: 1rem 0;
         margin: 0;
     }
 
     .sidebar-menu li {
-        margin-bottom: 5px;
+        padding: 0.5rem 1.5rem;
     }
 
     .sidebar-menu a {
         display: flex;
         align-items: center;
-        padding: 12px 15px;
-        color: rgba(255, 255, 255, 0.7);
+        padding: 0.75rem 1rem;
+        color: var(--light);
         text-decoration: none;
-        border-radius: 8px;
+        border-radius: 0.5rem;
         transition: all 0.3s ease;
+        gap: 0.75rem;
     }
 
-    .sidebar-menu a:hover, .sidebar-menu a.active {
-        background: rgba(255, 255, 255, 0.1);
+    .sidebar-menu a:hover {
+        background: rgba(52, 152, 219, 0.1);
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .sidebar-menu a.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .sidebar-menu a.active:hover {
+        background: var(--primary-dark);
         color: white;
     }
 
     .sidebar-menu i {
-        margin-right: 10px;
+        width: 20px;
+        text-align: center;
         font-size: 1.1rem;
+        transition: all 0.3s ease;
     }
 
     .menu-label {
-        font-size: 0.8rem;
+        color: var(--gray);
+        font-size: 0.75rem;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.4);
-        margin: 20px 0 10px;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
+        padding: 1.5rem 1.5rem 0.5rem;
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            box-shadow: none;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
     }
 </style>
 

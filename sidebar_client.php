@@ -9,17 +9,33 @@ $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <style>
+    :root {
+        --primary: #3498db;
+        --primary-dark: #2980b9;
+        --secondary: #2ecc71;
+        --dark: #2c3e50;
+        --darker: #243342;
+        --light: #ecf0f1;
+        --danger: #e74c3c;
+        --danger-dark: #c0392b;
+        --gray: #95a5a6;
+        --gray-dark: #7f8c8d;
+        --success: #2ecc71;
+        --warning: #f1c40f;
+    }
+
     .sidebar {
-        background: #2c3e50;
+        background: var(--dark);
         width: 250px;
         height: 100vh;
         position: fixed;
         left: 0;
         top: 0;
-        color: #ecf0f1;
+        color: var(--light);
         transition: all 0.3s ease;
         z-index: 1000;
         overflow-y: auto;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     }
 
     .sidebar.collapsed {
@@ -38,8 +54,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
     .sidebar-header {
         padding: 1.5rem;
         text-align: center;
-        background: #243342;
-        border-bottom: 1px solid #34495e;
+        background: var(--darker);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
         position: relative;
     }
 
@@ -47,9 +63,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
         position: absolute;
         right: -40px;
         top: 15px;
-        background: #2c3e50;
+        background: var(--dark);
         border: none;
-        color: #ecf0f1;
+        color: var(--light);
         width: 40px;
         height: 40px;
         border-radius: 0 5px 5px 0;
@@ -58,10 +74,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     }
 
     .hamburger-menu:hover {
-        background: #34495e;
+        background: var(--primary);
+        color: white;
     }
 
     .sidebar-header h3 {
@@ -71,16 +89,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
     }
 
     .sidebar-brand {
-        color: #ecf0f1;
+        color: var(--light);
         text-decoration: none;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+        transition: all 0.3s ease;
     }
 
     .sidebar-brand:hover {
-        color: #3498db;
+        color: var(--primary);
     }
 
     .menu-items {
@@ -94,7 +113,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     }
 
     .menu-link {
-        color: #ecf0f1;
+        color: var(--light);
         text-decoration: none;
         display: flex;
         align-items: center;
@@ -105,27 +124,30 @@ $current_page = basename($_SERVER['PHP_SELF']);
     }
 
     .menu-link:hover {
-        background: #34495e;
-        color: #3498db;
+        background: rgba(52, 152, 219, 0.1);
+        color: var(--primary);
         text-decoration: none;
     }
 
     .menu-link.active {
-        background: #3498db;
-        color: #fff;
+        background: var(--primary);
+        color: white;
     }
 
     .menu-link.active:hover {
-        color: #fff;
+        background: var(--primary-dark);
+        color: white;
     }
 
     .menu-link i {
         width: 20px;
         text-align: center;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
     }
 
     .menu-header {
-        color: #bdc3c7;
+        color: var(--gray);
         font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -141,9 +163,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
         font-size: 0.75rem;
         font-weight: 600;
         border-radius: 9999px;
-        background: #e74c3c;
+        background: var(--danger);
         color: white;
         min-width: 1.5rem;
+        transition: all 0.3s ease;
     }
 
     .user-info {
@@ -151,8 +174,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
         bottom: 0;
         width: 100%;
         padding: 1rem 1.5rem;
-        background: #243342;
-        border-top: 1px solid #34495e;
+        background: var(--darker);
+        border-top: 1px solid rgba(255,255,255,0.1);
     }
 
     .user-info-content {
@@ -165,10 +188,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: #3498db;
+        background: var(--primary);
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .user-avatar i {
+        color: white;
+        font-size: 1.2rem;
     }
 
     .user-details {
@@ -179,32 +208,34 @@ $current_page = basename($_SERVER['PHP_SELF']);
         font-weight: 600;
         font-size: 0.9rem;
         margin-bottom: 0.25rem;
-        color: #ecf0f1;
+        color: var(--light);
     }
 
     .user-role {
         font-size: 0.8rem;
-        color: #bdc3c7;
+        color: var(--gray);
     }
 
     .logout-btn {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        color: #ecf0f1;
+        color: var(--light);
         text-decoration: none;
         padding: 0.5rem;
-        border-radius: 0.25rem;
+        border-radius: 0.5rem;
         font-size: 0.9rem;
         margin-top: 0.5rem;
-        background: #e74c3c;
-        transition: background 0.3s ease;
+        background: var(--danger);
+        transition: all 0.3s ease;
         justify-content: center;
+        border: none;
+        width: 100%;
     }
 
     .logout-btn:hover {
-        background: #c0392b;
-        color: #ecf0f1;
+        background: var(--danger-dark);
+        color: white;
         text-decoration: none;
     }
 
@@ -226,7 +257,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
 
         .hamburger-menu {
-            right: -40px;
+            display: flex;
         }
     }
 </style>

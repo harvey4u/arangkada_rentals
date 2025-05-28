@@ -9,46 +9,127 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 
 require 'db.php';
 
-// Fetch system statistics
+// Initialize statistics array
 $stats = [];
 
-// Total users count
-$stmt = $pdo->query("SELECT COUNT(*) FROM users");
-$stats['total_users'] = $stmt->fetchColumn();
+/**
+ * User Statistics
+ */
+function getUserStatistics($pdo) {
+    $stmt = $pdo->query("
+        SELECT r.name as role_name, COUNT(u.id) as count
+        FROM roles r
+        LEFT JOIN user_roles ur ON r.id = ur.role_id
+        LEFT JOIN users u ON ur.user_id = u.id
+        GROUP BY r.name
+    ");
+    return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+}
 
-// Total cars count
-$stmt = $pdo->query("SELECT COUNT(*) FROM cars");
-$stats['total_cars'] = $stmt->fetchColumn();
+/**
+ * Vehicle Statistics
+ */
+function getVehicleStatistics($pdo) {
+    $stats = [];
+    
+    // Available cars
+    $stmt = $pdo->query("SELECT COUNT(*) FROM cars WHERE status = 'available'");
+    $stats['available_cars'] = $stmt->fetchColumn();
+    
+    // Rented cars
+    $stmt = $pdo->query("SELECT COUNT(*) FROM cars WHERE status = 'rented'");
+    $stats['rented_cars'] = $stmt->fetchColumn();
+    
+    // Maintenance cars
+    $stmt = $pdo->query("SELECT COUNT(*) FROM cars WHERE status = 'maintenance'");
+    $stats['maintenance_cars'] = $stmt->fetchColumn();
+    
+    return $stats;
+}
 
-// Total active rentals
-$stmt = $pdo->query("SELECT COUNT(*) FROM rentals WHERE status = 'active'");
-$stats['active_rentals'] = $stmt->fetchColumn();
+/**
+ * Rental Statistics
+ */
+function getRentalStatistics($pdo) {
+    $stats = [];
+    
+    // Active rentals
+    $stmt = $pdo->query("SELECT COUNT(*) FROM rentals WHERE status = 'active'");
+    $stats['active_rentals'] = $stmt->fetchColumn();
+    
+    // Pending rentals
+    $stmt = $pdo->query("SELECT COUNT(*) FROM rentals WHERE status = 'pending'");
+    $stats['pending_rentals'] = $stmt->fetchColumn();
+    
+    // Total revenue
+    $stmt = $pdo->query("SELECT COALESCE(SUM(total_price), 0) FROM rentals WHERE status != 'cancelled'");
+    $stats['total_revenue'] = $stmt->fetchColumn();
+    
+    return $stats;
+}
 
-// Total revenue
-$stmt = $pdo->query("SELECT COALESCE(SUM(total_price), 0) FROM rentals WHERE status != 'cancelled'");
-$stats['total_revenue'] = $stmt->fetchColumn();
+/**
+ * Recent Activity
+ */
+function getRecentActivity($pdo) {
+    $activity = [];
+    
+    // Recent users
+    $stmt = $pdo->query("
+        SELECT u.*, r.name as role_name 
+        FROM users u 
+        LEFT JOIN user_roles ur ON u.id = ur.user_id 
+        LEFT JOIN roles r ON ur.role_id = r.id 
+        ORDER BY u.created_at DESC 
+        LIMIT 5
+    ");
+    $activity['recent_users'] = $stmt->fetchAll();
+    
+    // Recent rentals
+    $stmt = $pdo->query("
+        SELECT r.*, u.username, c.make, c.model, c.year 
+        FROM rentals r 
+        JOIN users u ON r.user_id = u.id 
+        JOIN cars c ON r.car_id = c.id 
+        ORDER BY r.created_at DESC 
+        LIMIT 5
+    ");
+    $activity['recent_rentals'] = $stmt->fetchAll();
+    
+    return $activity;
+}
 
-// Recent users
-$stmt = $pdo->query("
-    SELECT u.*, r.name as role_name 
-    FROM users u 
-    LEFT JOIN user_roles ur ON u.id = ur.user_id 
-    LEFT JOIN roles r ON ur.role_id = r.id 
-    ORDER BY u.created_at DESC 
-    LIMIT 5
-");
-$recentUsers = $stmt->fetchAll();
+/**
+ * Pending Items Statistics
+ */
+function getPendingStatistics($pdo) {
+    $stats = [];
+    
+    // Pending drivers
+    $stmt = $pdo->query("
+        SELECT COUNT(*) FROM users u 
+        JOIN user_roles ur ON u.id = ur.user_id 
+        JOIN roles r ON ur.role_id = r.id 
+        WHERE r.name = 'driver' AND u.is_verified = 0
+    ");
+    $stats['pending_drivers'] = $stmt->fetchColumn();
+    
+    // Cars in maintenance
+    $stmt = $pdo->query("SELECT COUNT(*) FROM cars WHERE status = 'maintenance'");
+    $stats['pending_maintenance'] = $stmt->fetchColumn();
+    
+    return $stats;
+}
 
-// Recent rentals
-$stmt = $pdo->query("
-    SELECT r.*, u.username, c.make, c.model, c.year 
-    FROM rentals r 
-    JOIN users u ON r.user_id = u.id 
-    JOIN cars c ON r.car_id = c.id 
-    ORDER BY r.created_at DESC 
-    LIMIT 5
-");
-$recentRentals = $stmt->fetchAll();
+// Gather all statistics
+$user_stats = getUserStatistics($pdo);
+$stats = array_merge(
+    $stats,
+    getVehicleStatistics($pdo),
+    getRentalStatistics($pdo),
+    getPendingStatistics($pdo)
+);
+$activity = getRecentActivity($pdo);
 ?>
 
 <!DOCTYPE html>
@@ -60,323 +141,408 @@ $recentRentals = $stmt->fetchAll();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --primary-dark: #1a252f;
-            --secondary-color: #e74c3c;
-            --success-color: #2ecc71;
-            --warning-color: #f1c40f;
-            --info-color: #3498db;
-            --text-dark: #2c3e50;
-            --text-light: #7f8c8d;
-            --background-light: #ecf0f1;
+            /* Minimalist Color Palette */
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --secondary: #16a34a;
+            --secondary-light: #dcfce7;
+            --warning: #ca8a04;
+            --warning-light: #fef9c3;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --gray-light: #f1f5f9;
             --white: #ffffff;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            
+            /* Spacing */
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+            
+            /* Other Variables */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.375rem;
+            --radius: 0.5rem;
+            --transition: all 0.2s ease;
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
-            line-height: 1.6;
-            background: var(--background-light);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--gray-light);
+            color: var(--dark);
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
         }
 
         .main-content {
             margin-left: 250px;
-            padding: 2rem;
-            transition: margin-left 0.3s ease;
+            padding: var(--spacing-lg);
+            min-height: 100vh;
         }
 
-        .stats-grid {
+        .quick-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
         }
 
         .stat-card {
             background: var(--white);
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: center;
+            border-radius: var(--radius);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid var(--gray-light);
         }
 
-        .stat-card i {
-            font-size: 2rem;
-            margin-bottom: 1rem;
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
         }
 
-        .stat-card.users i { color: var(--info-color); }
-        .stat-card.cars i { color: var(--success-color); }
-        .stat-card.rentals i { color: var(--warning-color); }
-        .stat-card.revenue i { color: var(--secondary-color); }
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-icon.users { background: var(--primary-light); color: var(--primary); }
+        .stat-icon.cars { background: var(--secondary-light); color: var(--secondary); }
+        .stat-icon.rentals { background: var(--warning-light); color: var(--warning); }
+        .stat-icon.revenue { background: var(--danger-light); color: var(--danger); }
 
         .stat-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--text-dark);
-            margin-bottom: 0.5rem;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: var(--spacing-xs) 0;
         }
 
-        .stat-label {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .stat-details {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--gray-light);
         }
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 2rem;
-        }
-
-        .card {
-            background: var(--white);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .card h2 {
-            color: var(--text-dark);
-            margin-bottom: 1.5rem;
+        .stat-detail {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 1.2rem;
+            color: var(--gray);
+            font-size: 0.875rem;
+            padding: var(--spacing-xs) 0;
         }
 
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        th, td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .status-active { background: #d4edda; color: #155724; }
-        .status-completed { background: #cce5ff; color: #004085; }
-        .status-cancelled { background: #f8d7da; color: #721c24; }
-
-        .quick-actions {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
-        }
-
-        .btn {
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--primary-color);
-            color: var(--white);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: var(--gray-light);
+            color: var(--gray);
+        }
+
+        .management-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gray-light);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .management-card {
+            background: var(--white);
+            border: 1px solid var(--gray-light);
+            border-radius: var(--radius);
+            padding: var(--spacing-md);
             text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
+            color: var(--dark);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
         }
 
-        .btn:hover {
-            background: var(--primary-dark);
+        .management-card:hover {
+            background: var(--gray-light);
+            border-color: var(--primary);
         }
 
-        /* Mobile menu button */
-        .menu-toggle {
-            display: none;
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            background: var(--primary-color);
-            color: var(--white);
-            border: none;
-            padding: 0.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            z-index: 1001;
+        .management-card i {
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .management-info {
+            flex: 1;
+        }
+
+        .management-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .management-subtitle {
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 1200px) {
+            .quick-stats {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
         }
 
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
+                padding: var(--spacing-md);
             }
 
-            .menu-toggle {
-                display: block;
-            }
-
-            .dashboard-grid {
+            .management-grid {
                 grid-template-columns: 1fr;
             }
 
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
+            .stat-card {
+                padding: var(--spacing-md);
             }
         }
     </style>
 </head>
 <body>
-    <!-- Include the superadmin sidebar -->
     <?php include 'sidebar_superadmin.php'; ?>
 
-    <!-- Mobile menu toggle button -->
-    <button class="menu-toggle" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </button>
-
     <main class="main-content">
-        <div class="stats-grid">
-            <div class="stat-card users">
-                <i class="fas fa-users"></i>
-                <div class="stat-value"><?= number_format($stats['total_users']) ?></div>
-                <div class="stat-label">Total Users</div>
+        <div class="quick-stats">
+            <div class="quick-stat">
+                <div class="stat-header">
+                    <div class="stat-icon users">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span class="badge badge-primary">Total Users</span>
+                </div>
+                <div class="stat-value"><?= array_sum($user_stats) ?></div>
+                <div class="stat-details">
+                    <?php foreach ($user_stats as $role => $count): ?>
+                        <div class="stat-detail">
+                            <?= ucfirst($role) ?>: <?= $count ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
-            <div class="stat-card cars">
-                <i class="fas fa-car"></i>
-                <div class="stat-value"><?= number_format($stats['total_cars']) ?></div>
-                <div class="stat-label">Total Cars</div>
+
+            <div class="quick-stat">
+                <div class="stat-header">
+                    <div class="stat-icon cars">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <span class="badge badge-primary">Vehicle Status</span>
+                </div>
+                <div class="stat-value"><?= $stats['available_cars'] ?></div>
+                <div class="stat-details">
+                    <div class="stat-detail">Available Cars</div>
+                    <div class="stat-detail">Rented: <?= $stats['rented_cars'] ?></div>
+                    <div class="stat-detail">Maintenance: <?= $stats['maintenance_cars'] ?></div>
+                </div>
             </div>
-            <div class="stat-card rentals">
-                <i class="fas fa-file-contract"></i>
-                <div class="stat-value"><?= number_format($stats['active_rentals']) ?></div>
-                <div class="stat-label">Active Rentals</div>
+
+            <div class="quick-stat">
+                <div class="stat-header">
+                    <div class="stat-icon rentals">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                    <span class="badge badge-warning">Active Rentals</span>
+                </div>
+                <div class="stat-value"><?= $stats['active_rentals'] ?></div>
+                <div class="stat-details">
+                    <div class="stat-detail">Pending: <?= $stats['pending_rentals'] ?></div>
+                </div>
             </div>
-            <div class="stat-card revenue">
-                <i class="fas fa-money-bill-wave"></i>
+
+            <div class="quick-stat">
+                <div class="stat-header">
+                    <div class="stat-icon revenue">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <span class="badge badge-danger">Total Revenue</span>
+                </div>
                 <div class="stat-value">₱<?= number_format($stats['total_revenue'], 2) ?></div>
-                <div class="stat-label">Total Revenue</div>
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <div class="card">
-                <h2><i class="fas fa-user-plus"></i> Recent Users</h2>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Joined</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($recentUsers as $user): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($user['username']) ?></td>
-                                <td><?= htmlspecialchars($user['email']) ?></td>
-                                <td><?= htmlspecialchars($user['role_name'] ?? 'No Role') ?></td>
-                                <td><?= date('M d, Y', strtotime($user['created_at'])) ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+        <div class="management-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-users-cog"></i>
+                    User Management
+                </h2>
             </div>
-
-            <div class="card">
-                <h2><i class="fas fa-file-contract"></i> Recent Rentals</h2>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Car</th>
-                                <th>Status</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($recentRentals as $rental): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($rental['username']) ?></td>
-                                <td><?= htmlspecialchars($rental['make'] . ' ' . $rental['model'] . ' ' . $rental['year']) ?></td>
-                                <td>
-                                    <span class="status-badge status-<?= $rental['status'] ?>">
-                                        <?= ucfirst($rental['status']) ?>
-                                    </span>
-                                </td>
-                                <td>₱<?= number_format($rental['total_price'], 2) ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="management-grid">
+                <a href="manage_admins.php" class="management-card">
+                    <i class="fas fa-user-tie"></i>
+                    <div class="management-info">
+                        <div class="management-title">Manage Admins</div>
+                        <div class="management-subtitle">System administrators</div>
+                    </div>
+                </a>
+                <a href="manage_staff.php" class="management-card">
+                    <i class="fas fa-user-cog"></i>
+                    <div class="management-info">
+                        <div class="management-title">Manage Staff</div>
+                        <div class="management-subtitle">Support staff members</div>
+                    </div>
+                </a>
+                <a href="manage_drivers.php" class="management-card">
+                    <i class="fas fa-id-card"></i>
+                    <div class="management-info">
+                        <div class="management-title">Manage Drivers</div>
+                        <div class="management-subtitle">Professional drivers</div>
+                        <?php if ($stats['pending_drivers'] > 0): ?>
+                            <span class="badge badge-warning"><?= $stats['pending_drivers'] ?> pending</span>
+                        <?php endif; ?>
+                    </div>
+                </a>
+                <a href="manage_clients.php" class="management-card">
+                    <i class="fas fa-users"></i>
+                    <div class="management-info">
+                        <div class="management-title">Manage Clients</div>
+                        <div class="management-subtitle">Rental customers</div>
+                    </div>
+                </a>
             </div>
         </div>
 
-        <div class="card">
-            <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
-            <div class="quick-actions">
-                <a href="add_user.php" class="btn">
-                    <i class="fas fa-user-plus"></i> Add New User
+        <div class="management-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-car"></i>
+                    Vehicle Management
+                </h2>
+            </div>
+            <div class="management-grid">
+                <a href="manage_cars.php" class="management-card">
+                    <i class="fas fa-car"></i>
+                    <div class="management-info">
+                        <div class="management-title">Manage Cars</div>
+                        <div class="management-subtitle">Vehicle inventory</div>
+                    </div>
                 </a>
-                <a href="add_car.php" class="btn">
-                    <i class="fas fa-car-side"></i> Add New Car
+                <a href="car_maintenance.php" class="management-card">
+                    <i class="fas fa-tools"></i>
+                    <div class="management-info">
+                        <div class="management-title">Maintenance</div>
+                        <div class="management-subtitle">Vehicle maintenance</div>
+                        <?php if ($stats['pending_maintenance'] > 0): ?>
+                            <span class="badge badge-warning"><?= $stats['pending_maintenance'] ?> pending</span>
+                        <?php endif; ?>
+                    </div>
                 </a>
-                <a href="reports.php" class="btn">
-                    <i class="fas fa-chart-bar"></i> View Reports
+                <a href="car_categories.php" class="management-card">
+                    <i class="fas fa-tags"></i>
+                    <div class="management-info">
+                        <div class="management-title">Categories</div>
+                        <div class="management-subtitle">Vehicle categories</div>
+                    </div>
                 </a>
-                <a href="backup.php" class="btn">
-                    <i class="fas fa-database"></i> Backup System
+            </div>
+        </div>
+
+        <div class="management-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-file-contract"></i>
+                    Rental Management
+                </h2>
+            </div>
+            <div class="management-grid">
+                <a href="manage_rentals.php" class="management-card">
+                    <i class="fas fa-file-contract"></i>
+                    <div class="management-info">
+                        <div class="management-title">Active Rentals</div>
+                        <div class="management-subtitle">Current rentals</div>
+                        <?php if ($stats['active_rentals'] > 0): ?>
+                            <span class="badge badge-primary"><?= $stats['active_rentals'] ?> active</span>
+                        <?php endif; ?>
+                    </div>
+                </a>
+                <a href="rental_requests.php" class="management-card">
+                    <i class="fas fa-clock"></i>
+                    <div class="management-info">
+                        <div class="management-title">Rental Requests</div>
+                        <div class="management-subtitle">Pending approvals</div>
+                        <?php if ($stats['pending_rentals'] > 0): ?>
+                            <span class="badge badge-warning"><?= $stats['pending_rentals'] ?> pending</span>
+                        <?php endif; ?>
+                    </div>
+                </a>
+                <a href="rental_calendar.php" class="management-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div class="management-info">
+                        <div class="management-title">Rental Calendar</div>
+                        <div class="management-subtitle">Schedule overview</div>
+                    </div>
                 </a>
             </div>
         </div>
     </main>
 
     <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('active');
-        }
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            const sidebar = document.querySelector('.sidebar');
+        document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.querySelector('.menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
             
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(event.target) && !menuToggle.contains(event.target)) {
-                    sidebar.classList.remove('active');
-                }
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
             }
         });
     </script>
