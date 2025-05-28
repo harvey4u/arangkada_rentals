@@ -12,299 +12,262 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'client') {
 $user_id = $_SESSION['user_id'];
 ?>
 
-<?php include 'header.php'; ?>
-<?php include 'navbar.php'; ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Arangkada</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
 
-<!-- Main Layout -->
-<style>
-    .container {
-        display: flex;
-    }
+        .main-content {
+            transition: margin-left 0.3s ease;
+            margin-left: 250px;
+            padding: 20px;
+        }
 
-    .main-content {
-        flex: 1;
-        padding: 20px;
-        background-color: white;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        margin: 20px;
-        border-radius: 5px;
-    }
+        .main-content.expanded {
+            margin-left: 0;
+        }
 
-    .card-box {
-        padding: 20px;
-        border-radius: 8px;
-        background-color: #f8f9fa;
-        border-left: 5px solid #3498db;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-        text-align: center;
-    }
+        /* Stats cards */
+        .stats-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
 
-    .card-box h3 {
-        margin-bottom: 5px;
-        color: #2c3e50;
-    }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
 
-    .card-box span {
-        font-size: 24px;
-        font-weight: bold;
-        color: #3498db;
-    }
+        .stats-card h3 {
+            color: #2c3e50;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
 
-    /* Table styling */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-    }
+        .stats-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+        }
 
-    table, th, td {
-        border: 1px solid #ddd;
-    }
+        /* Table styling */
+        .custom-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
 
-    th, td {
-        padding: 12px;
-        text-align: center;
-    }
+        .custom-table th {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+        }
 
-    th {
-        background-color: #3498db;
-        color: white;
-    }
+        .custom-table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
 
-    tr:nth-child(even) {
-        background-color: #f2f2f2;
-    }
+        .custom-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
 
-    tr:hover {
-        background-color: #e3f2fd;
-    }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
 
-    .car-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
 
-    .car-card {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        overflow: hidden;
-        transition: transform 0.2s;
-    }
+        .status-completed {
+            background-color: #cce5ff;
+            color: #004085;
+        }
 
-    .car-card:hover {
-        transform: translateY(-5px);
-    }
+        .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
 
-    .car-image {
-        width: 100%;
-        height: 200px;
-        object-fit: cover;
-    }
+        /* Toggle button for mobile */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
 
-    .car-details {
-        padding: 15px;
-    }
+<?php include 'sidebar_client.php'; ?>
 
-    .car-title {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #2c3e50;
-        margin-bottom: 10px;
-    }
-
-    .car-price {
-        color: #3498db;
-        font-size: 1.1em;
-        font-weight: bold;
-    }
-
-    .rent-btn {
-        display: inline-block;
-        background: #3498db;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 4px;
-        text-decoration: none;
-        margin-top: 10px;
-        transition: background 0.2s;
-    }
-
-    .rent-btn:hover {
-        background: #2980b9;
-    }
-
-    .status-badge {
-        padding: 5px 10px;
-        border-radius: 15px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .status-active {
-        background-color: #d4edda;
-        color: #155724;
-    }
-
-    .status-completed {
-        background-color: #cce5ff;
-        color: #004085;
-    }
-
-    .status-cancelled {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-</style>
-
-<div class="container">
-    <?php include 'sidebar_client.php'; ?>
-
-    <main class="main-content">
+<div class="main-content">
+    <div class="container-fluid">
         <h2 class="mb-4">Welcome, <?= htmlspecialchars($_SESSION['username']) ?>!</h2>
 
-        <div class="stats-section">
-            <div class="row">
-                <?php
-                try {
-                    // Get client's rental statistics with corrected column names
-                    $stmt = $pdo->prepare("
-                        SELECT 
-                            COUNT(*) as total_rentals,
-                            SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_rentals,
-                            SUM(total_price) as total_spent
-                        FROM rentals 
-                        WHERE user_id = ?
-                    ");
-                    $stmt->execute([$user_id]);
-                    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+        <div class="row">
+            <?php
+            try {
+                // Get client's rental statistics
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        COUNT(*) as total_rentals,
+                        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_rentals,
+                        SUM(total_price) as total_spent
+                    FROM rentals 
+                    WHERE user_id = ?
+                ");
+                $stmt->execute([$user_id]);
+                $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    // Initialize stats if null
-                    if (!$stats) {
-                        $stats = [
-                            'total_rentals' => 0,
-                            'active_rentals' => 0,
-                            'total_spent' => 0
-                        ];
-                    }
-                } catch (PDOException $e) {
-                    echo "Error fetching statistics: " . $e->getMessage();
+                // Initialize stats if null
+                if (!$stats) {
                     $stats = [
                         'total_rentals' => 0,
                         'active_rentals' => 0,
                         'total_spent' => 0
                     ];
                 }
-                ?>
-
-                <div class="col-md-4">
-                    <div class="card-box">
-                        <h3>Total Rentals</h3>
-                        <span><?= $stats['total_rentals'] ?></span>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card-box">
-                        <h3>Active Rentals</h3>
-                        <span><?= $stats['active_rentals'] ?></span>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card-box">
-                        <h3>Total Spent</h3>
-                        <span>₱<?= number_format($stats['total_spent'], 2) ?></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="rental-history">
-            <h3>Your Rental History</h3>
-            <?php
-            try {
-                // Updated query to use correct column names and dates
-                $stmt = $pdo->prepare("
-                    SELECT r.*, c.make, c.model
-                    FROM rentals r
-                    JOIN cars c ON r.car_id = c.id
-                    WHERE r.user_id = ?
-                    ORDER BY r.created_at DESC
-                    LIMIT 5
-                ");
-                $stmt->execute([$user_id]);
-                $rentals = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Car</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Status</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($rentals as $rental): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($rental['make'] . ' ' . $rental['model']) ?></td>
-                                <td><?= htmlspecialchars($rental['start_date']) ?></td>
-                                <td><?= htmlspecialchars($rental['end_date']) ?></td>
-                                <td>
-                                    <span class="status-badge status-<?= strtolower($rental['status']) ?>">
-                                        <?= ucfirst(htmlspecialchars($rental['status'])) ?>
-                                    </span>
-                                </td>
-                                <td>₱<?= number_format($rental['total_price'], 2) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php
             } catch (PDOException $e) {
-                echo "Error fetching rental history: " . $e->getMessage();
+                $stats = [
+                    'total_rentals' => 0,
+                    'active_rentals' => 0,
+                    'total_spent' => 0
+                ];
             }
             ?>
-        </div>
 
-        <div class="available-cars">
-            <h3>Available Cars</h3>
-            <div class="car-grid">
-                <?php
-                try {
-                    $stmt = $pdo->query("
-                        SELECT * FROM cars 
-                        WHERE status = 'available'
-                        ORDER BY price_per_day ASC
-                    ");
-                    $cars = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3><i class="fas fa-car-side me-2"></i>Total Rentals</h3>
+                    <div class="number"><?= $stats['total_rentals'] ?></div>
+                </div>
+            </div>
 
-                    foreach ($cars as $car):
-                        // Set a default image if none is provided
-                        $imageUrl = $car['image'] ? htmlspecialchars($car['image']) : 'assets/images/default-car.jpg';
-                ?>
-                    <div class="car-card">
-                        <img src="<?= $imageUrl ?>" alt="<?= htmlspecialchars($car['make'] . ' ' . $car['model']) ?>" class="car-image" onerror="this.src='assets/images/default-car.jpg'">
-                        <div class="car-details">
-                            <div class="car-title"><?= htmlspecialchars($car['make'] . ' ' . $car['model']) ?></div>
-                            <div class="car-price">₱<?= number_format($car['price_per_day'], 2) ?> per day</div>
-                            <a href="rent_car.php?id=<?= $car['id'] ?>" class="rent-btn">Rent Now</a>
-                        </div>
-                    </div>
-                <?php
-                    endforeach;
-                } catch (PDOException $e) {
-                    echo "Error fetching available cars: " . $e->getMessage();
-                }
-                ?>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3><i class="fas fa-clock me-2"></i>Active Rentals</h3>
+                    <div class="number"><?= $stats['active_rentals'] ?></div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3><i class="fas fa-money-bill-wave me-2"></i>Total Spent</h3>
+                    <div class="number">₱<?= number_format($stats['total_spent'], 2) ?></div>
+                </div>
             </div>
         </div>
-    </main>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h3 class="card-title mb-0">Recent Rentals</h3>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        try {
+                            $stmt = $pdo->prepare("
+                                SELECT r.*, c.make, c.model
+                                FROM rentals r
+                                JOIN cars c ON r.car_id = c.id
+                                WHERE r.user_id = ?
+                                ORDER BY r.created_at DESC
+                                LIMIT 5
+                            ");
+                            $stmt->execute([$user_id]);
+                            $rentals = $stmt->fetchAll();
+                        ?>
+                            <div class="table-responsive">
+                                <table class="table custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Car</th>
+                                            <th>Start Date</th>
+                                            <th>End Date</th>
+                                            <th>Status</th>
+                                            <th>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($rentals as $rental): ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($rental['make'] . ' ' . $rental['model']) ?></td>
+                                                <td><?= htmlspecialchars($rental['start_date']) ?></td>
+                                                <td><?= htmlspecialchars($rental['end_date']) ?></td>
+                                                <td>
+                                                    <span class="status-badge status-<?= strtolower($rental['status']) ?>">
+                                                        <?= ucfirst(htmlspecialchars($rental['status'])) ?>
+                                                    </span>
+                                                </td>
+                                                <td>₱<?= number_format($rental['total_price'], 2) ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php
+                        } catch (PDOException $e) {
+                            echo '<div class="alert alert-danger">Error fetching rental history.</div>';
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<?php include 'footer.php'; ?> 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mainContent = document.querySelector('.main-content');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    // Check initial sidebar state
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        mainContent.classList.add('expanded');
+    }
+
+    // Listen for sidebar toggle events
+    sidebarToggle.addEventListener('click', function() {
+        mainContent.classList.toggle('expanded');
+    });
+
+    // Handle responsive behavior
+    function checkWidth() {
+        if (window.innerWidth <= 768) {
+            mainContent.classList.add('expanded');
+        } else {
+            if (localStorage.getItem('sidebarCollapsed') !== 'true') {
+                mainContent.classList.remove('expanded');
+            }
+        }
+    }
+
+    window.addEventListener('resize', checkWidth);
+    checkWidth(); // Initial check
+});
+</script>
+
+</body>
+</html> 

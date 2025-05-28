@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <?php include 'sidebar_client.php'; ?>
 
-<div class="container" style="margin-left: 270px; padding: 20px;">
+<div class="container" style="transition: margin-left 0.3s ease; margin-left: 250px; padding: 20px;">
     <h2 class="mb-4">My Profile</h2>
     
     <div class="card">

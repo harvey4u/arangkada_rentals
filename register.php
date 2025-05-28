@@ -73,173 +73,283 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Arangkada Car Rentals</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary: #3498db;
+            --primary-dark: #2980b9;
+            --secondary: #2ecc71;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+        }
+
         body {
-            background: #f4f6f8;
             font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
+            background: #f4f6f9;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        .header {
-            background: #3498db;
-            color: #fff;
-            padding: 24px 0;
-            text-align: center;
-            letter-spacing: 1px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+        .navbar {
+            background: var(--primary);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .header h1 {
-            margin: 0;
-            font-size: 2.2em;
-            font-weight: 700;
-            letter-spacing: 2px;
-        }
-        .nav {
-            margin-top: 12px;
-        }
-        .nav a {
-            color: #fff;
-            text-decoration: none;
-            margin: 0 18px;
-            font-size: 1.1em;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        .nav a:hover {
-            color: #e3f2fd;
-        }
-        .container {
-            max-width: 400px;
-            margin: 40px auto;
-            padding: 30px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0,0,0,0.08);
-            border-radius: 8px;
-        }
-        .form-title {
-            color: #3498db;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 1.8em;
-        }
-        .message {
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .message.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        input[type="text"],
-        input[type="password"],
-        input[type="email"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 1em;
-            margin-bottom: 15px;
-        }
-        .btn {
-            background: #3498db;
-            color: #fff;
-            padding: 12px 32px;
-            border: none;
-            border-radius: 25px;
-            font-size: 1.1em;
+
+        .navbar-brand {
+            font-size: 1.5rem;
             font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
+            color: var(--light) !important;
         }
-        .btn:hover {
-            background: #2980b9;
+
+        .nav-link {
+            color: var(--light) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
         }
-        .login-link {
+
+        .nav-link:hover {
+            color: #fff !important;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+
+        .register-container {
+            max-width: 500px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        .register-header {
             text-align: center;
-            margin-top: 20px;
+            margin-bottom: 2rem;
         }
-        .login-btn {
-            background: #fff;
-            color: #3498db;
-            border: 2px solid #3498db;
-            padding: 10px 24px;
-            border-radius: 25px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.2s;
+
+        .register-header h1 {
+            color: var(--primary);
+            font-size: 2rem;
+            font-weight: 600;
         }
-        .login-btn:hover {
-            background: #3498db;
-            color: #fff;
+
+        .register-header p {
+            color: var(--dark);
+            opacity: 0.7;
         }
-        .footer {
-            background: #3498db;
-            color: #fff;
-            text-align: center;
-            padding: 18px 0;
-            margin-top: 40px;
-            font-size: 1em;
-            letter-spacing: 1px;
-            position: fixed;
-            bottom: 0;
+
+        .form-control {
+            padding: 0.75rem 1rem;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            padding: 0.75rem 2rem;
+            font-weight: 500;
             width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+            padding: 0.75rem 2rem;
+            font-weight: 500;
+            width: 100%;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .alert {
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: none;
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+            z-index: 1;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 1rem;
+            color: #666;
+            position: relative;
+            z-index: 2;
+        }
+
+        footer {
+            background: var(--dark);
+            color: var(--light);
+            padding: 1.5rem 0;
+            margin-top: auto;
+        }
+
+        .password-requirements {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .password-requirements ul {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 0;
+        }
+
+        .password-requirements li {
+            margin-bottom: 0.25rem;
+        }
+
+        .password-requirements i {
+            margin-right: 0.5rem;
+            color: var(--primary);
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <h1>🚗 Arangkada Car Rentals</h1>
-        <nav class="nav">
-            <a href="index.php">Home</a>
-        </nav>
-    </header>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.php">
+                <i class="fas fa-car"></i> Arangkada
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
     <div class="container">
-        <h2 class="form-title">Create Your Account</h2>
-
-        <?php
-        if (isset($_SESSION['error'])) {
-            echo "<div class='message error'>{$_SESSION['error']}</div>";
-            unset($_SESSION['error']);
-        }
-
-        if (isset($_SESSION['message'])) {
-            echo "<div class='message success'>{$_SESSION['message']}</div>";
-            unset($_SESSION['message']);
-        }
-        ?>
-
-        <form method="POST">
-            <div class="form-group">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="email" name="email" placeholder="Email" required>
-                <input type="password" name="password" placeholder="Password" required>
+        <div class="register-container">
+            <div class="register-header">
+                <h1><i class="fas fa-user-plus"></i></h1>
+                <h1>Create Account</h1>
+                <p>Join Arangkada Car Rentals today</p>
             </div>
-            <button type="submit" class="btn">Register</button>
-        </form>
 
-        <div class="login-link">
-            <p>Already have an account?</p>
-            <a href="login.php"><button type="button" class="login-btn">Login Now</button></a>
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger">
+                    <?= $_SESSION['error'] ?>
+                    <?php unset($_SESSION['error']); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['message'])): ?>
+                <div class="alert alert-success">
+                    <?= $_SESSION['message'] ?>
+                    <?php unset($_SESSION['message']); ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control" name="username" placeholder="Username" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                        <input type="email" class="form-control" name="email" placeholder="Email" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control" name="password" placeholder="Password" required>
+                    </div>
+                    <div class="password-requirements">
+                        <ul>
+                            <li><i class="fas fa-check-circle"></i>At least 8 characters long</li>
+                            <li><i class="fas fa-check-circle"></i>Contains at least one uppercase letter</li>
+                            <li><i class="fas fa-check-circle"></i>Contains at least one number</li>
+                            <li><i class="fas fa-check-circle"></i>Contains at least one special character</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </form>
+
+            <div class="divider">
+                <span>or</span>
+            </div>
+
+            <a href="login.php" class="btn btn-outline-primary">
+                <i class="fas fa-sign-in-alt"></i> Login to Existing Account
+            </a>
         </div>
     </div>
 
-    <footer class="footer">
-        <p>&copy; 2025 Arangkada Car Rentals. All rights reserved.</p>
+    <footer class="text-center">
+        <p class="mb-0">&copy; <?= date('Y') ?> Arangkada Car Rentals. All rights reserved.</p>
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
