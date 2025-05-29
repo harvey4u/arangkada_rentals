@@ -562,6 +562,12 @@ if (isset($_GET['code']) && $_GET['code']) {
                             <span class="meta-label">Total Amount</span>
                             <span class="rental-amount">₱<?= number_format($rental['total_price'], 2) ?></span>
                         </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Reservation Code</span>
+                            <span class="meta-value" style="font-weight:700;letter-spacing:2px;">
+                                <?= htmlspecialchars($rental['reservation_code']) ?>
+                            </span>
+                        </div>
                     </div>
 
                     <div class="rental-actions">

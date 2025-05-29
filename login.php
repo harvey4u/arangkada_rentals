@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                           FROM users u 
                           LEFT JOIN user_roles ur ON u.id = ur.user_id 
                           LEFT JOIN roles r ON ur.role_id = r.id 
-                          WHERE u.username = ?");
-    $stmt->execute([$username]);
+                          WHERE u.username = ? OR u.email = ?");
+    $stmt->execute([$username, $username]);
     $user = $stmt->fetch();
 
     if ($user) {
@@ -311,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user"></i></span>
-                        <input type="text" class="form-control" name="username" placeholder="Username" required>
+                        <input type="text" class="form-control" name="username" placeholder="Username or Email" required>
                     </div>
                 </div>
                 

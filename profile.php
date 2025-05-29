@@ -70,6 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $current_password = $_POST['current_password'] ?? '';
     $new_password = $_POST['new_password'] ?? '';
+    $first_name = $_POST['first_name'] ?? '';
+    $last_name = $_POST['last_name'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $address = $_POST['address'] ?? '';
+    $date_of_birth = $_POST['date_of_birth'] ?? '';
     
     try {
         $pdo->beginTransaction();
@@ -86,8 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Update other information
-        $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");
-        $stmt->execute([$email, $_SESSION['user_id']]);
+        $stmt = $pdo->prepare("UPDATE users SET email = ?, first_name = ?, last_name = ?, phone = ?, address = ?, date_of_birth = ? WHERE id = ?");
+        $stmt->execute([$email, $first_name, $last_name, $phone, $address, $date_of_birth, $_SESSION['user_id']]);
         
         $pdo->commit();
         $success_message = "Profile updated successfully!";
@@ -300,6 +305,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--gray);
             font-size: 0.875rem;
         }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .col-md-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+        @media (max-width: 600px) {
+            .col-md-6 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+            .row {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -370,26 +394,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="POST">
+                <div class="row">
+                    <div class="form-group col-md-6">
+                        <label class="form-label" for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" class="form-control" value="<?= htmlspecialchars($user['first_name'] ?? '') ?>" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label class="form-label" for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" class="form-control" value="<?= htmlspecialchars($user['last_name'] ?? '') ?>" required>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>
                     <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($user['username']) ?>" readonly>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label" for="email">Email</label>
                     <input type="email" id="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
                 </div>
-
+                <div class="form-group">
+                    <label class="form-label" for="phone">Contact Number</label>
+                    <input type="text" id="phone" name="phone" class="form-control" value="<?= htmlspecialchars($user['phone'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="address">Address</label>
+                    <input type="text" id="address" name="address" class="form-control" value="<?= htmlspecialchars($user['address'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="date_of_birth">Date of Birth</label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" value="<?= htmlspecialchars($user['date_of_birth'] ?? '') ?>">
+                </div>
                 <div class="form-group">
                     <label class="form-label" for="current_password">Current Password (required for password change)</label>
                     <input type="password" id="current_password" name="current_password" class="form-control">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label" for="new_password">New Password (leave blank to keep current)</label>
                     <input type="password" id="new_password" name="new_password" class="form-control">
                 </div>
-
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i>
                     Update Profile

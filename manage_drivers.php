@@ -17,6 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_driver'])) {
     $license_number = $_POST['license_number'];
     $license_expiry = $_POST['license_expiry'];
     $experience_years = $_POST['experience_years'];
+    $contact_number = $_POST['contact_number'];
+    $address = $_POST['address'];
+    $license_type = $_POST['license_type'];
     
     try {
         $pdo->beginTransaction();
@@ -36,8 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_driver'])) {
         $stmt->execute([$user_id, $role_id]);
         
         // Add driver details
-        $stmt = $pdo->prepare("INSERT INTO driver_details (user_id, license_number, license_expiry, experience_years) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$user_id, $license_number, $license_expiry, $experience_years]);
+        $stmt = $pdo->prepare("INSERT INTO driver_details (user_id, license_number, license_expiry, experience_years, contact_number, address, license_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$user_id, $license_number, $license_expiry, $experience_years, $contact_number, $address, $license_type]);
         
         $pdo->commit();
         $success_message = "Driver created successfully!";
@@ -367,6 +370,9 @@ $drivers = $stmt->fetchAll();
                             <th>License Number</th>
                             <th>License Expiry</th>
                             <th>Experience</th>
+                            <th>Contact</th>
+                            <th>Address</th>
+                            <th>License Type</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -389,6 +395,9 @@ $drivers = $stmt->fetchAll();
                                 </td>
                                 <td><?= date('M d, Y', strtotime($driver['license_expiry'])) ?></td>
                                 <td><?= htmlspecialchars($driver['experience_years']) ?> years</td>
+                                <td><?= htmlspecialchars($driver['contact_number']) ?></td>
+                                <td><?= htmlspecialchars($driver['address']) ?></td>
+                                <td><?= htmlspecialchars($driver['license_type']) ?></td>
                                 <td>
                                     <button class="btn btn-danger" onclick="deleteDriver(<?= $driver['id'] ?>)">
                                         <i class="fas fa-trash"></i>
@@ -433,6 +442,21 @@ $drivers = $stmt->fetchAll();
                 <div class="form-group">
                     <label class="form-label" for="experience_years">Years of Experience</label>
                     <input type="number" id="experience_years" name="experience_years" class="form-control" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="contact_number">Contact Number</label>
+                    <input type="text" id="contact_number" name="contact_number" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="address">Address</label>
+                    <input type="text" id="address" name="address" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="license_type">License Type</label>
+                    <select id="license_type" name="license_type" class="form-control" required>
+                        <option value="Non-Professional">Non-Professional</option>
+                        <option value="Professional">Professional</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <button type="submit" name="create_driver" class="btn btn-primary">

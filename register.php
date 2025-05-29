@@ -11,6 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $phone = $_POST['phone'];
+    $address = $_POST['address'];
+    $date_of_birth = $_POST['date_of_birth'];
+    $first_name = $_POST['first_name'];
+    $last_name = $_POST['last_name'];
 
     // Check duplicates before proceeding
     $emailExists = $pdo->prepare("SELECT COUNT(*) FROM users WHERE email = ?");
@@ -34,7 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'email' => $email,
             'password' => $password,
             'otp' => $otp,
-            'expires_at' => $expiresAt
+            'expires_at' => $expiresAt,
+            'phone' => $phone,
+            'address' => $address,
+            'date_of_birth' => $date_of_birth,
+            'first_name' => $first_name,
+            'last_name' => $last_name
         ];
 
         // Send OTP email
@@ -128,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: white;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            min-width: 320px;
         }
 
         .register-header {
@@ -255,6 +266,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-right: 0.5rem;
             color: var(--primary);
         }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -0.5rem;
+            margin-left: -0.5rem;
+        }
+
+        .col-md-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+            padding-right: 0.5rem;
+            padding-left: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .col-md-6 {
+                flex: 0 0 100%;
+                max-width: 100%;
+                margin-bottom: 1rem;
+            }
+            .row {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -301,33 +337,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
 
-            <form method="POST">
+            <form method="POST" id="registerForm">
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" name="first_name" placeholder="First Name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" name="last_name" placeholder="Last Name" required>
+                        </div>
+                    </div>
+                </div>
                 <div class="mb-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user"></i></span>
                         <input type="text" class="form-control" name="username" placeholder="Username" required>
                     </div>
                 </div>
-
                 <div class="mb-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                         <input type="email" class="form-control" name="email" placeholder="Email" required>
                     </div>
                 </div>
-
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                        <input type="text" class="form-control" name="phone" placeholder="Contact Number" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                        <input type="text" class="form-control" name="address" placeholder="Address" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-birthday-cake"></i></span>
+                        <input type="date" class="form-control" name="date_of_birth" placeholder="Date of Birth" required>
+                    </div>
+                </div>
                 <div class="mb-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                        <input type="password" class="form-control" name="password" placeholder="Password" required>
+                        <input type="password" class="form-control" name="password" id="password" placeholder="Password" required>
                     </div>
-                    <div class="password-requirements">
-                        <ul>
-                            <li><i class="fas fa-check-circle"></i>At least 8 characters long</li>
-                            <li><i class="fas fa-check-circle"></i>Contains at least one uppercase letter</li>
-                            <li><i class="fas fa-check-circle"></i>Contains at least one number</li>
-                            <li><i class="fas fa-check-circle"></i>Contains at least one special character</li>
-                        </ul>
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control" name="confirm_password" id="confirm_password" placeholder="Confirm Password" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="terms" required>
+                        <label class="form-check-label" for="terms">
+                            I agree to the <a href="terms.php" target="_blank">Terms and Conditions</a>
+                        </label>
                     </div>
                 </div>
 
@@ -351,5 +423,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        var pw = document.getElementById('password').value;
+        var cpw = document.getElementById('confirm_password').value;
+        if (pw !== cpw) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+            document.getElementById('confirm_password').focus();
+        }
+        if (!document.getElementById('terms').checked) {
+            e.preventDefault();
+            alert('You must agree to the Terms and Conditions to register.');
+            document.getElementById('terms').focus();
+        }
+    });
+    </script>
 </body>
 </html>

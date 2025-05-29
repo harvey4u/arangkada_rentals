@@ -398,6 +398,9 @@ $clients = $stmt->fetchAll();
                         <tr>
                             <th>Client</th>
                             <th>Email</th>
+                            <th>Contact</th>
+                            <th>Address</th>
+                            <th>Date of Birth</th>
                             <th>Rental History</th>
                             <th>Member Since</th>
                             <th>Actions</th>
@@ -417,6 +420,9 @@ $clients = $stmt->fetchAll();
                                 <td>
                                     <div class="contact-info">
                                         <div><i class="fas fa-envelope"></i> <?= htmlspecialchars($client['email']) ?></div>
+                                        <div><i class="fas fa-phone"></i> <?= htmlspecialchars($client['phone']) ?></div>
+                                        <div><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($client['address']) ?></div>
+                                        <div><i class="fas fa-birthday-cake"></i> <?= htmlspecialchars($client['date_of_birth']) ?></div>
                                     </div>
                                 </td>
                                 <td>
@@ -470,6 +476,18 @@ $clients = $stmt->fetchAll();
                 <div class="form-group">
                     <label class="form-label" for="password">Password</label>
                     <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="contact_number">Contact Number</label>
+                    <input type="text" id="contact_number" name="contact_number" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="address">Address</label>
+                    <input type="text" id="address" name="address" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="date_of_birth">Date of Birth</label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <button type="submit" name="create_client" class="btn btn-primary">
