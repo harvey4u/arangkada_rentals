@@ -1,8 +1,8 @@
 <?php
-session_start();
+require_once 'session.php';
 
-// Check if user is logged in and is a superadmin
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'superadmin') {
+// Check if user is logged in and has appropriate role
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'superadmin', 'staff'])) {
     header('Location: login.php');
     exit;
 }
@@ -320,7 +320,16 @@ $drivers = $stmt->fetchAll();
     </style>
 </head>
 <body>
-    <?php include 'sidebar_superadmin.php'; ?>
+    <?php 
+    // Include the appropriate sidebar based on user role
+    if ($_SESSION['role'] === 'superadmin') {
+        include 'sidebar_superadmin.php';
+    } elseif ($_SESSION['role'] === 'admin') {
+        include 'sidebar_admin.php';
+    } else {
+        include 'sidebar_staff.php';
+    }
+    ?>
 
     <main class="main-content">
         <div class="card">

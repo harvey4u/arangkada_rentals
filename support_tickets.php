@@ -1,6 +1,6 @@
 <?php
 require_once 'db.php';
-session_start();
+require_once 'session.php';
 
 // Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -26,14 +26,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ticket'])) {
         $_SESSION['error_message'] = "Error creating ticket: " . $e->getMessage();
     }
 }
-
-include 'header.php';
-include 'navbar.php';
 ?>
 
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Tickets - Arangkada</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
     .container {
         display: flex;
+        min-height: 100vh;
+        background-color: #f5f6fa;
+        padding-left: 250px;
+        transition: padding-left 0.3s ease;
     }
 
     .main-content {
@@ -43,6 +51,7 @@ include 'navbar.php';
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         margin: 20px;
         border-radius: 5px;
+        width: 100%;
     }
 
     .ticket-form {
@@ -159,87 +168,94 @@ include 'navbar.php';
         border-color: #f5c6cb;
         color: #721c24;
     }
-</style>
 
-<div class="container">
-    <?php include 'sidebar_' . $_SESSION['role'] . '.php'; ?>
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 0;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <?php include 'sidebar_' . $_SESSION['role'] . '.php'; ?>
 
-    <main class="main-content">
-        <h2>Support Tickets</h2>
+        <main class="main-content">
+            <h2>Support Tickets</h2>
 
-        <?php if (isset($_SESSION['success_message'])): ?>
-            <div class="alert alert-success">
-                <?php 
-                echo $_SESSION['success_message'];
-                unset($_SESSION['success_message']);
-                ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if (isset($_SESSION['error_message'])): ?>
-            <div class="alert alert-danger">
-                <?php 
-                echo $_SESSION['error_message'];
-                unset($_SESSION['error_message']);
-                ?>
-            </div>
-        <?php endif; ?>
-
-        <div class="ticket-form">
-            <h3>Create New Ticket</h3>
-            <form method="POST" action="">
-                <div class="form-group">
-                    <label for="subject">Subject</label>
-                    <input type="text" class="form-control" id="subject" name="subject" required>
+            <?php if (isset($_SESSION['success_message'])): ?>
+                <div class="alert alert-success">
+                    <?php 
+                    echo $_SESSION['success_message'];
+                    unset($_SESSION['success_message']);
+                    ?>
                 </div>
-                <div class="form-group">
-                    <label for="message">Message</label>
-                    <textarea class="form-control" id="message" name="message" required></textarea>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="alert alert-danger">
+                    <?php 
+                    echo $_SESSION['error_message'];
+                    unset($_SESSION['error_message']);
+                    ?>
                 </div>
-                <button type="submit" name="submit_ticket" class="btn-submit">Submit Ticket</button>
-            </form>
-        </div>
+            <?php endif; ?>
 
-        <div class="tickets-list">
-            <h3>Your Tickets</h3>
-            <?php
-            try {
-                $stmt = $pdo->prepare("
-                    SELECT * FROM support_tickets 
-                    WHERE user_id = ? 
-                    ORDER BY created_at DESC
-                ");
-                $stmt->execute([$user_id]);
-                $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            <div class="ticket-form">
+                <h3>Create New Ticket</h3>
+                <form method="POST" action="">
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea class="form-control" id="message" name="message" required></textarea>
+                    </div>
+                    <button type="submit" name="submit_ticket" class="btn-submit">Submit Ticket</button>
+                </form>
+            </div>
 
-                if (count($tickets) > 0) {
-                    foreach ($tickets as $ticket) {
-                        ?>
-                        <div class="ticket-card">
-                            <div class="ticket-header">
-                                <div class="ticket-subject"><?= htmlspecialchars($ticket['subject']) ?></div>
-                                <span class="ticket-status status-<?= strtolower($ticket['status']) ?>">
-                                    <?= ucfirst(htmlspecialchars($ticket['status'])) ?>
-                                </span>
+            <div class="tickets-list">
+                <h3>Your Tickets</h3>
+                <?php
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT * FROM support_tickets 
+                        WHERE user_id = ? 
+                        ORDER BY created_at DESC
+                    ");
+                    $stmt->execute([$user_id]);
+                    $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    if (count($tickets) > 0) {
+                        foreach ($tickets as $ticket) {
+                            ?>
+                            <div class="ticket-card">
+                                <div class="ticket-header">
+                                    <div class="ticket-subject"><?= htmlspecialchars($ticket['subject']) ?></div>
+                                    <span class="ticket-status status-<?= strtolower($ticket['status']) ?>">
+                                        <?= ucfirst(htmlspecialchars($ticket['status'])) ?>
+                                    </span>
+                                </div>
+                                <div class="ticket-date">
+                                    Created: <?= date('F j, Y g:i A', strtotime($ticket['created_at'])) ?>
+                                </div>
+                                <div class="ticket-message">
+                                    <?= nl2br(htmlspecialchars($ticket['message'])) ?>
+                                </div>
                             </div>
-                            <div class="ticket-date">
-                                Created: <?= date('F j, Y g:i A', strtotime($ticket['created_at'])) ?>
-                            </div>
-                            <div class="ticket-message">
-                                <?= nl2br(htmlspecialchars($ticket['message'])) ?>
-                            </div>
-                        </div>
-                        <?php
+                            <?php
+                        }
+                    } else {
+                        echo "<p>No tickets found.</p>";
                     }
-                } else {
-                    echo "<p>No tickets found.</p>";
+                } catch (PDOException $e) {
+                    echo "<p>Error loading tickets: " . htmlspecialchars($e->getMessage()) . "</p>";
                 }
-            } catch (PDOException $e) {
-                echo "<p>Error loading tickets: " . htmlspecialchars($e->getMessage()) . "</p>";
-            }
-            ?>
-        </div>
-    </main>
-</div>
-
-<?php include 'footer.php'; ?>
+                ?>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

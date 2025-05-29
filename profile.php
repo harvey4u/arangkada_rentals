@@ -1,29 +1,106 @@
 <?php
-session_start();
-require_once 'db.php';
+require_once 'session.php';
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'client') {
+// Check if user is logged in
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
     header('Location: login.php');
     exit;
 }
 
+// Additional role-specific access check
+$allowed_roles = ['superadmin', 'admin', 'staff', 'client'];
+if (!in_array($_SESSION['role'], $allowed_roles)) {
+    header('Location: login.php');
+    exit;
+}
+
+require_once 'db.php';
+
 // Get user information
-$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmt = $pdo->prepare("
+    SELECT u.*, r.name as role_name 
+    FROM users u 
+    JOIN user_roles ur ON u.id = ur.user_id 
+    JOIN roles r ON ur.role_id = r.id 
+    WHERE u.id = ?
+");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch();
 
+// Get additional role-specific information
+$role_stats = [];
+switch($user['role_name']) {
+    case 'superadmin':
+        // Get total users count
+        $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+        $role_stats['total_users'] = $stmt->fetchColumn();
+        // Get total roles count
+        $stmt = $pdo->query("SELECT COUNT(*) FROM roles");
+        $role_stats['total_roles'] = $stmt->fetchColumn();
+        break;
+    case 'admin':
+        // Get total staff count
+        $stmt = $pdo->query("SELECT COUNT(*) FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'staff'");
+        $role_stats['total_staff'] = $stmt->fetchColumn();
+        // Get total clients count
+        $stmt = $pdo->query("SELECT COUNT(*) FROM users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE r.name = 'client'");
+        $role_stats['total_clients'] = $stmt->fetchColumn();
+        break;
+    case 'staff':
+        // Get total handled rentals
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE staff_id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $role_stats['handled_rentals'] = $stmt->fetchColumn();
+        break;
+    case 'client':
+        // Get total rentals and active rentals
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE client_id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $role_stats['total_rentals'] = $stmt->fetchColumn();
+        
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE client_id = ? AND status = 'active'");
+        $stmt->execute([$_SESSION['user_id']]);
+        $role_stats['active_rentals'] = $stmt->fetchColumn();
+        break;
+}
+
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fullname = $_POST['fullname'] ?? '';
+    $username = $_POST['username'] ?? '';
     $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
+    $current_password = $_POST['current_password'] ?? '';
+    $new_password = $_POST['new_password'] ?? '';
     
-    $stmt = $pdo->prepare("UPDATE users SET fullname = ?, email = ?, phone = ? WHERE id = ?");
-    $stmt->execute([$fullname, $email, $phone, $_SESSION['user_id']]);
-    
-    // Refresh user data
-    header('Location: profile.php');
-    exit;
+    try {
+        $pdo->beginTransaction();
+        
+        // Verify current password if trying to change password
+        if (!empty($new_password)) {
+            if (empty($current_password) || !password_verify($current_password, $user['password'])) {
+                throw new Exception("Current password is incorrect");
+            }
+            // Update password
+            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $stmt->execute([$hashed_password, $_SESSION['user_id']]);
+        }
+        
+        // Update other information
+        $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");
+        $stmt->execute([$email, $_SESSION['user_id']]);
+        
+        $pdo->commit();
+        $success_message = "Profile updated successfully!";
+        
+        // Refresh user data
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $user = $stmt->fetch();
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error_message = $e->getMessage();
+    }
 }
 ?>
 
@@ -33,45 +110,306 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Arangkada</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --secondary: #16a34a;
+            --secondary-light: #dcfce7;
+            --warning: #ca8a04;
+            --warning-light: #fef9c3;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --gray-light: #f1f5f9;
+            --white: #ffffff;
+            
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+            
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.375rem;
+            --radius: 0.5rem;
+            --transition: all 0.2s ease;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: var(--spacing-lg);
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--gray-light);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-md);
+            font-size: 0.875rem;
+        }
+
+        .alert-success {
+            background: var(--secondary-light);
+            color: var(--secondary);
+        }
+
+        .alert-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: var(--spacing-md);
+            }
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .role-superadmin {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .role-admin {
+            background: #0891b2;
+            color: white;
+        }
+
+        .role-staff {
+            background: #059669;
+            color: white;
+        }
+
+        .role-client {
+            background: #0284c7;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--gray-light);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-sm);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+    </style>
 </head>
 <body>
+    <?php 
+    // Include the appropriate sidebar based on user role
+    if ($user['role_name'] === 'superadmin') {
+        include 'sidebar_superadmin.php';
+    } elseif ($user['role_name'] === 'admin') {
+        include 'sidebar_admin.php';
+    } elseif ($user['role_name'] === 'staff') {
+        include 'sidebar_staff.php';
+    } else {
+        include 'sidebar_client.php';
+    }
+    ?>
 
-<?php include 'sidebar_client.php'; ?>
+    <main class="main-content">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-user-circle"></i>
+                    My Profile
+                </h2>
+            </div>
 
-<div class="container" style="transition: margin-left 0.3s ease; margin-left: 250px; padding: 20px;">
-    <h2 class="mb-4">My Profile</h2>
-    
-    <div class="card">
-        <div class="card-body">
+            <?php if (isset($success_message)): ?>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <?= htmlspecialchars($success_message) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($error_message)): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?= htmlspecialchars($error_message) ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="role-badge role-<?= strtolower($user['role_name']) ?>">
+                <i class="fas <?php
+                    switch($user['role_name']) {
+                        case 'superadmin':
+                            echo 'fa-user-shield';
+                            break;
+                        case 'admin':
+                            echo 'fa-user-tie';
+                            break;
+                        case 'staff':
+                            echo 'fa-user-gear';
+                            break;
+                        default:
+                            echo 'fa-user';
+                    }
+                ?>"></i>
+                <?= ucfirst(htmlspecialchars($user['role_name'])) ?>
+            </div>
+
+            <?php if (!empty($role_stats)): ?>
+            <div class="stats-grid">
+                <?php foreach($role_stats as $label => $value): ?>
+                    <div class="stat-card">
+                        <div class="stat-value"><?= number_format($value) ?></div>
+                        <div class="stat-label"><?= ucwords(str_replace('_', ' ', $label)) ?></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
             <form method="POST">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" value="<?= htmlspecialchars($user['username']) ?>" readonly>
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($user['username']) ?>" readonly>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="fullname" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="fullname" name="fullname" value="<?= htmlspecialchars($user['fullname'] ?? '') ?>">
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>">
+
+                <div class="form-group">
+                    <label class="form-label" for="current_password">Current Password (required for password change)</label>
+                    <input type="password" id="current_password" name="current_password" class="form-control">
                 </div>
-                
-                <div class="mb-3">
-                    <label for="phone" class="form-label">Phone Number</label>
-                    <input type="tel" class="form-control" id="phone" name="phone" value="<?= htmlspecialchars($user['phone'] ?? '') ?>">
+
+                <div class="form-group">
+                    <label class="form-label" for="new_password">New Password (leave blank to keep current)</label>
+                    <input type="password" id="new_password" name="new_password" class="form-control">
                 </div>
-                
-                <button type="submit" class="btn btn-primary">Update Profile</button>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Update Profile
+                </button>
             </form>
         </div>
-    </div>
-</div>
+    </main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-10px)';
+                    setTimeout(() => alert.remove(), 300);
+                }, 5000);
+            });
+        });
+    </script>
 </body>
 </html> 

@@ -1,5 +1,5 @@
 <?php
-// Include your DB connection file
+require_once 'session.php';
 require_once 'db.php';
 
 try {
@@ -22,13 +22,20 @@ try {
 }
 ?>
 
-<?php include 'header.php'; ?>
-<?php include 'navbar.php'; ?>
-
-<!-- Main Layout -->
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Management - Arangkada</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
     .container {
         display: flex;
+        min-height: 100vh;
+        background-color: #f5f6fa;
+        padding-left: 250px;
+        transition: padding-left 0.3s ease;
     }
 
     .main-content {
@@ -38,6 +45,7 @@ try {
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         margin: 20px;
         border-radius: 5px;
+        width: 100%;
     }
 
     .card-box {
@@ -180,81 +188,88 @@ try {
         flex: 1;
         min-width: 200px;
     }
-</style>
 
-<div class="container">
-    <?php include 'sidebar.php'; ?>
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 0;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <?php include 'sidebar_' . $_SESSION['role'] . '.php'; ?>
 
-    <main class="main-content">
-        <h2 class="mb-4">Client Management</h2>
+        <main class="main-content">
+            <h2 class="mb-4">Client Management</h2>
 
-        <!-- Client Statistics -->
-        <div class="stats-row">
-            <div class="card-box">
-                <h3>Total Clients</h3>
-                <span><?= count($clients) ?></span>
+            <!-- Client Statistics -->
+            <div class="stats-row">
+                <div class="card-box">
+                    <h3>Total Clients</h3>
+                    <span><?= count($clients) ?></span>
+                </div>
+                <div class="card-box">
+                    <h3>Verified Clients</h3>
+                    <span><?= count(array_filter($clients, function($client) { return $client['is_verified'] == 1; })) ?></span>
+                </div>
+                <div class="card-box">
+                    <h3>Unverified Clients</h3>
+                    <span><?= count(array_filter($clients, function($client) { return $client['is_verified'] == 0; })) ?></span>
+                </div>
             </div>
-            <div class="card-box">
-                <h3>Verified Clients</h3>
-                <span><?= count(array_filter($clients, function($client) { return $client['is_verified'] == 1; })) ?></span>
+
+            <h2 class="mt-5">All Clients</h2>
+
+            <!-- Search Box -->
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search clients by username or email..." onkeyup="searchTable()">
             </div>
-            <div class="card-box">
-                <h3>Unverified Clients</h3>
-                <span><?= count(array_filter($clients, function($client) { return $client['is_verified'] == 0; })) ?></span>
-            </div>
-        </div>
 
-        <h2 class="mt-5">All Clients</h2>
-
-        <!-- Search Box -->
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search clients by username or email..." onkeyup="searchTable()">
-        </div>
-
-        <?php if (count($clients) > 0): ?>
-            <table id="clientsTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Role</th>
-                        <th>Registered</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach($clients as $client): ?>
+            <?php if (count($clients) > 0): ?>
+                <table id="clientsTable">
+                    <thead>
                         <tr>
-                            <td><?= htmlspecialchars($client["id"]) ?></td>
-                            <td><?= htmlspecialchars($client["username"]) ?></td>
-                            <td><?= htmlspecialchars($client["email"]) ?></td>
-                            <td>
-                                <span class="status-badge <?= $client['is_verified'] ? 'status-verified' : 'status-unverified' ?>">
-                                    <?= $client['is_verified'] ? 'Verified' : 'Unverified' ?>
-                                </span>
-                            </td>
-                            <td><?= htmlspecialchars($client["role_name"]) ?></td>
-                            <td><?= date('M d, Y', strtotime($client["created_at"])) ?></td>
-                            <td class="actions">
-                                <a href="view_client.php?id=<?= $client['id'] ?>" class="btn btn-view">View</a>
-                                <a href="edit_client.php?id=<?= $client['id'] ?>" class="btn btn-edit">Edit</a>
-                            </td>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Role</th>
+                            <th>Registered</th>
+                            <th>Actions</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <div class="no-data">
-                <h3>No Clients Found</h3>
-                <p>There are currently no registered clients in the system.</p>
-            </div>
-        <?php endif; ?>
-    </main>
-</div>
+                    </thead>
+                    <tbody>
+                        <?php foreach($clients as $client): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($client["id"]) ?></td>
+                                <td><?= htmlspecialchars($client["username"]) ?></td>
+                                <td><?= htmlspecialchars($client["email"]) ?></td>
+                                <td>
+                                    <span class="status-badge <?= $client['is_verified'] ? 'status-verified' : 'status-unverified' ?>">
+                                        <?= $client['is_verified'] ? 'Verified' : 'Unverified' ?>
+                                    </span>
+                                </td>
+                                <td><?= htmlspecialchars($client["role_name"]) ?></td>
+                                <td><?= date('M d, Y', strtotime($client["created_at"])) ?></td>
+                                <td class="actions">
+                                    <a href="view_client.php?id=<?= $client['id'] ?>" class="btn btn-view">View</a>
+                                    <a href="edit_client.php?id=<?= $client['id'] ?>" class="btn btn-edit">Edit</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <div class="no-data">
+                    <h3>No Clients Found</h3>
+                    <p>There are currently no registered clients in the system.</p>
+                </div>
+            <?php endif; ?>
+        </main>
+    </div>
 
-<script>
+    <script>
     function searchTable() {
         const input = document.getElementById("searchInput");
         const filter = input.value.toUpperCase();
@@ -281,6 +296,6 @@ try {
             }
         }
     }
-</script>
-
-<?php include 'footer.php'; ?>
+    </script>
+</body>
+</html>

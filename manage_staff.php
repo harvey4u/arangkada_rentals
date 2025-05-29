@@ -1,8 +1,8 @@
 <?php
-session_start();
+require_once 'session.php';
 
-// Check if user is logged in and is a superadmin
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'superadmin') {
+// Check if user is logged in and has appropriate role
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {
     header('Location: login.php');
     exit;
 }
@@ -14,7 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_staff'])) {
     $username = $_POST['username'];
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $department = $_POST['department'];
     
     try {
         $pdo->beginTransaction();
@@ -24,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_staff'])) {
         $stmt->execute([$username, $email, $password]);
         $user_id = $pdo->lastInsertId();
         
-        // Get staff role ID
+        // Get staff role ID (role_id = 3 for staff)
         $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'staff'");
         $stmt->execute();
         $role_id = $stmt->fetchColumn();
@@ -38,6 +37,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_staff'])) {
     } catch (PDOException $e) {
         $pdo->rollBack();
         $error_message = "Error creating staff member: " . $e->getMessage();
+    }
+}
+
+// Handle staff deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_staff'])) {
+    $staff_id = $_POST['staff_id'];
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // Delete from user_roles first (cascade will handle the rest)
+        $stmt = $pdo->prepare("DELETE FROM user_roles WHERE user_id = ? AND role_id = (SELECT id FROM roles WHERE name = 'staff')");
+        $stmt->execute([$staff_id]);
+        
+        // Delete from users
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$staff_id]);
+        
+        $pdo->commit();
+        $success_message = "Staff member deleted successfully!";
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        $error_message = "Error deleting staff member: " . $e->getMessage();
     }
 }
 
@@ -316,13 +338,20 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
     </style>
 </head>
 <body>
-    <?php include 'sidebar_superadmin.php'; ?>
+    <?php 
+    // Include the appropriate sidebar based on user role
+    if ($_SESSION['role'] === 'superadmin') {
+        include 'sidebar_superadmin.php';
+    } else {
+        include 'sidebar_admin.php';
+    }
+    ?>
 
     <main class="main-content">
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">
-                    <i class="fas fa-user-cog"></i>
+                    <i class="fas fa-user-tie"></i>
                     Manage Staff
                 </h2>
                 <button class="btn btn-primary" onclick="openModal()">
@@ -361,7 +390,7 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
                                 <td>
                                     <div class="staff-info">
                                         <div class="staff-avatar">
-                                            <i class="fas fa-user-cog"></i>
+                                            <i class="fas fa-user-tie"></i>
                                         </div>
                                         <?= htmlspecialchars($staff['username']) ?>
                                     </div>
@@ -369,10 +398,13 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
                                 <td><?= htmlspecialchars($staff['email']) ?></td>
                                 <td><?= date('M d, Y', strtotime($staff['created_at'])) ?></td>
                                 <td>
-                                    <button class="btn btn-danger" onclick="deleteStaff(<?= $staff['id'] ?>)">
-                                        <i class="fas fa-trash"></i>
-                                        Delete
-                                    </button>
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this staff member?');">
+                                        <input type="hidden" name="staff_id" value="<?= $staff['id'] ?>">
+                                        <button type="submit" name="delete_staff" class="btn btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -402,15 +434,6 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
                     <input type="password" id="password" name="password" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="department">Department</label>
-                    <select id="department" name="department" class="form-control" required>
-                        <option value="">Select Department</option>
-                        <?php foreach ($departments as $dept): ?>
-                            <option value="<?= htmlspecialchars($dept) ?>"><?= htmlspecialchars($dept) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
                     <button type="submit" name="create_staff" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Create Staff Member
@@ -431,12 +454,6 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
 
         function closeModal() {
             document.getElementById('addStaffModal').classList.remove('active');
-        }
-
-        function deleteStaff(staffId) {
-            if (confirm('Are you sure you want to delete this staff member?')) {
-                // Add delete functionality here
-            }
         }
 
         // Close modal when clicking outside
