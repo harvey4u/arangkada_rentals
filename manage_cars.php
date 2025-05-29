@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_car'])) {
     $year = $_POST['year'];
     $price_per_day = $_POST['price_per_day'];
     $plate_number = $_POST['plate_number'];
+    $seats = $_POST['seats'];
+    $transmission = $_POST['transmission'];
+    $fuel_type = $_POST['fuel_type'];
     
     // Handle image upload
     $image = null;
@@ -36,10 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_car'])) {
     
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO cars (make, model, year, price_per_day, plate_number, image, status) 
-            VALUES (?, ?, ?, ?, ?, ?, 'available')
+            INSERT INTO cars (make, model, year, price_per_day, plate_number, image, status, seats, transmission, fuel_type) 
+            VALUES (?, ?, ?, ?, ?, ?, 'available', ?, ?, ?)
         ");
-        $stmt->execute([$make, $model, $year, $price_per_day, $plate_number, $image]);
+        $stmt->execute([$make, $model, $year, $price_per_day, $plate_number, $image, $seats, $transmission, $fuel_type]);
         $success_message = "Car added successfully!";
     } catch (PDOException $e) {
         $error_message = "Error adding car: " . $e->getMessage();
@@ -387,6 +390,8 @@ $cars = $stmt->fetchAll();
                             <div class="car-info">
                                 <div><i class="fas fa-hashtag"></i> <?= htmlspecialchars($car['plate_number']) ?></div>
                                 <div><i class="fas fa-tag"></i> ₱<?= number_format($car['price_per_day'], 2) ?> per day</div>
+                                <div><i class="fas fa-users"></i> <?= htmlspecialchars($car['seats']) ?> seats</div>
+                                <div><i class="fas fa-cogs"></i> <?= htmlspecialchars(ucfirst($car['transmission'])) ?> | <i class="fas fa-gas-pump"></i> <?= htmlspecialchars(ucfirst($car['fuel_type'])) ?></div>
                                 <div>
                                     <i class="fas fa-chart-bar"></i> 
                                     <?= $car['total_rentals'] ?> total rentals (<?= $car['active_rentals'] ?> active)
@@ -431,6 +436,26 @@ $cars = $stmt->fetchAll();
                 <div class="form-group">
                     <label class="form-label" for="year">Year</label>
                     <input type="number" id="year" name="year" class="form-control" min="1900" max="<?= date('Y') + 1 ?>" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="seats">Seats</label>
+                    <input type="number" id="seats" name="seats" class="form-control" min="1" max="20" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="transmission">Transmission</label>
+                    <select id="transmission" name="transmission" class="form-control" required>
+                        <option value="automatic">Automatic</option>
+                        <option value="manual">Manual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="fuel_type">Fuel Type</label>
+                    <select id="fuel_type" name="fuel_type" class="form-control" required>
+                        <option value="gasoline">Gasoline</option>
+                        <option value="diesel">Diesel</option>
+                        <option value="electric">Electric</option>
+                        <option value="hybrid">Hybrid</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="price_per_day">Price Per Day (₱)</label>
