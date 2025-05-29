@@ -9,8 +9,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,8 +29,6 @@ import java.net.URLEncoder;
 public class RegisterActivity extends AppCompatActivity {
 
     private EditText etUsername, etEmail, etPassword, etConfirmPassword;
-    private RadioGroup rgRole;
-    private RadioButton rbClient, rbAdmin;
     private Button btnRegister;
     private ProgressBar progressBar;
     private TextView tvLogin;
@@ -59,15 +55,9 @@ public class RegisterActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         etConfirmPassword = findViewById(R.id.etConfirmPassword);
-        rgRole = findViewById(R.id.rgRole);
-        rbClient = findViewById(R.id.rbClient);
-        rbAdmin = findViewById(R.id.rbAdmin);
         btnRegister = findViewById(R.id.btnRegister);
         progressBar = findViewById(R.id.progressBar);
         tvLogin = findViewById(R.id.tvLogin);
-
-        // Set client as default role
-        rbClient.setChecked(true);
     }
 
     private void setClickListeners() {
@@ -98,7 +88,6 @@ public class RegisterActivity extends AppCompatActivity {
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
         String confirmPassword = etConfirmPassword.getText().toString().trim();
-        String role = rbAdmin.isChecked() ? "admin" : "client";
 
         // Clear previous errors
         etUsername.setError(null);
@@ -112,7 +101,6 @@ public class RegisterActivity extends AppCompatActivity {
         android.util.Log.d(TAG, "Email: " + (email.isEmpty() ? "empty" : "provided"));
         android.util.Log.d(TAG, "Password: " + (password.isEmpty() ? "empty" : "provided"));
         android.util.Log.d(TAG, "Confirm Password: " + (confirmPassword.isEmpty() ? "empty" : "provided"));
-        android.util.Log.d(TAG, "Role: " + role);
 
         // Check for empty fields
         if (username.isEmpty()) {
@@ -164,7 +152,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         // Double check that no field is empty before proceeding
-        if (username.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || role.isEmpty()) {
+        if (username.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
             showErrorDialog("Validation Error", "All fields are required");
             return;
         }
@@ -176,7 +164,7 @@ public class RegisterActivity extends AppCompatActivity {
         android.util.Log.d(TAG, "Form validation passed, proceeding with registration");
 
         // Proceed with registration
-        registerUser(username, email, password, role);
+        registerUser(username, email, password);
     }
 
     private void setLoading(boolean isLoading) {
@@ -186,10 +174,9 @@ public class RegisterActivity extends AppCompatActivity {
         etEmail.setEnabled(!isLoading);
         etPassword.setEnabled(!isLoading);
         etConfirmPassword.setEnabled(!isLoading);
-        rgRole.setEnabled(!isLoading);
     }
 
-    private void registerUser(String username, String email, String password, String role) {
+    private void registerUser(String username, String email, String password) {
         new Thread(() -> {
             HttpURLConnection conn = null;
             try {
@@ -200,75 +187,55 @@ public class RegisterActivity extends AppCompatActivity {
                 URL url = new URL(REGISTER_URL);
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
-                conn.setDoInput(true);
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 conn.setDoOutput(true);
+                conn.setDoInput(true);
                 conn.setConnectTimeout(CONNECTION_TIMEOUT);
                 conn.setReadTimeout(READ_TIMEOUT);
-                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                conn.setRequestProperty("Accept", "application/json");
 
-                // Create the POST data string with URL encoding
-                StringBuilder postDataBuilder = new StringBuilder();
-                postDataBuilder.append(URLEncoder.encode("username", "UTF-8"))
-                    .append("=")
-                    .append(URLEncoder.encode(username, "UTF-8"));
-                postDataBuilder.append("&")
-                    .append(URLEncoder.encode("email", "UTF-8"))
-                    .append("=")
-                    .append(URLEncoder.encode(email, "UTF-8"));
-                postDataBuilder.append("&")
-                    .append(URLEncoder.encode("password", "UTF-8"))
-                    .append("=")
-                    .append(URLEncoder.encode(password, "UTF-8"));
-                postDataBuilder.append("&")
-                    .append(URLEncoder.encode("role", "UTF-8"))
-                    .append("=")
-                    .append(URLEncoder.encode(role, "UTF-8"));
+                // Create the data to send
+                String data = URLEncoder.encode("username", "UTF-8") + "=" + URLEncoder.encode(username, "UTF-8") +
+                        "&" + URLEncoder.encode("email", "UTF-8") + "=" + URLEncoder.encode(email, "UTF-8") +
+                        "&" + URLEncoder.encode("password", "UTF-8") + "=" + URLEncoder.encode(password, "UTF-8") +
+                        "&" + URLEncoder.encode("role", "UTF-8") + "=" + URLEncoder.encode("client", "UTF-8");
 
+                // Send the request
+                OutputStream os = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                writer.write(data);
+                writer.flush();
+                writer.close();
+                os.close();
 
-                String postData = postDataBuilder.toString();
-
-                // Log request details
-                android.util.Log.d(TAG, "Request Headers:");
-                android.util.Log.d(TAG, "Content-Type: " + conn.getRequestProperty("Content-Type"));
-                android.util.Log.d(TAG, "Accept: " + conn.getRequestProperty("Accept"));
-                android.util.Log.d(TAG, "Post data being sent: " + postData);
-
-                // Write the POST data
-                try (OutputStream os = conn.getOutputStream();
-                     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"))) {
-                    writer.write(postData);
-                    writer.flush();
-                    android.util.Log.d(TAG, "Successfully wrote POST data");
-                }
-
+                // Get the response
                 int responseCode = conn.getResponseCode();
-                android.util.Log.d(TAG, "Server response code: " + responseCode);
+                android.util.Log.d(TAG, "Response Code: " + responseCode);
 
-                StringBuilder result = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                        (responseCode == HttpURLConnection.HTTP_OK) ? conn.getInputStream() : conn.getErrorStream()))) {
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder response = new StringBuilder();
                     String line;
+
                     while ((line = reader.readLine()) != null) {
-                        result.append(line);
+                        response.append(line);
                     }
+                    reader.close();
+
+                    // Handle the response
+                    handleRegisterResponse(response.toString(), email);
+                } else {
+                    runOnUiThread(() -> {
+                        setLoading(false);
+                        showErrorDialog("Registration Failed", "Server returned error code: " + responseCode);
+                    });
                 }
-
-                String response = result.toString();
-                android.util.Log.d(TAG, "Complete server response: " + response);
-
-                runOnUiThread(() -> {
-                    setLoading(false);
-                    handleRegisterResponse(response, email);
-                });
 
             } catch (Exception e) {
                 android.util.Log.e(TAG, "Error during registration: " + e.getMessage());
-                android.util.Log.e(TAG, "Stack trace:", e);
+                e.printStackTrace();
                 runOnUiThread(() -> {
                     setLoading(false);
-                    showErrorDialog("Registration Failed", 
-                        "Error: " + e.getMessage() + "\n\nPlease try again.");
+                    showErrorDialog("Registration Failed", "Error: " + e.getMessage());
                 });
             } finally {
                 if (conn != null) {
@@ -280,41 +247,31 @@ public class RegisterActivity extends AppCompatActivity {
 
     private void handleRegisterResponse(String response, String email) {
         try {
-            android.util.Log.d(TAG, "Parsing response: " + response);
-            JSONObject jsonObject = new JSONObject(response);
-            String status = jsonObject.getString("status");
-            String message = jsonObject.getString("message");
+            JSONObject jsonResponse = new JSONObject(response);
+            String status = jsonResponse.optString("status");
+            String message = jsonResponse.optString("message", "Unknown error occurred");
 
-            if ("success".equals(status)) {
-                String userId = jsonObject.optString("user_id", "");
-                String role = rbAdmin.isChecked() ? "admin" : "client";
-                String username = etUsername.getText().toString().trim();
-
-                // Start appropriate activity based on role
-                Intent intent;
-                if ("admin".equals(role)) {
-                    intent = new Intent(RegisterActivity.this, AdminDashboardActivity.class);
+            runOnUiThread(() -> {
+                setLoading(false);
+                if ("success".equals(status)) {
+                    Toast.makeText(RegisterActivity.this, "Registration successful!", Toast.LENGTH_SHORT).show();
+                    // Start login activity
+                    Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
+                    intent.putExtra("registered_email", email);
+                    startActivity(intent);
+                    finish();
                 } else {
-                    intent = new Intent(RegisterActivity.this, ClientDashboardActivity.class);
+                    showErrorDialog("Registration Failed", message);
                 }
-                
-                intent.putExtra("USER_ID", userId);
-                intent.putExtra("USERNAME", username);
-                intent.putExtra("ROLE", role);
-                startActivity(intent);
-                
-                // Show success message
-                Toast.makeText(RegisterActivity.this, 
-                    message, 
-                    Toast.LENGTH_SHORT).show();
-                
-                finish(); // Close registration activity
-            } else {
-                showErrorDialog("Registration Failed", message);
-            }
+            });
+
         } catch (Exception e) {
-            android.util.Log.e(TAG, "Error parsing response: " + e.getMessage(), e);
-            showErrorDialog("Error", "Could not process server response. Please try again.");
+            android.util.Log.e(TAG, "Error parsing response: " + e.getMessage());
+            e.printStackTrace();
+            runOnUiThread(() -> {
+                setLoading(false);
+                showErrorDialog("Registration Failed", "Error processing server response");
+            });
         }
     }
 

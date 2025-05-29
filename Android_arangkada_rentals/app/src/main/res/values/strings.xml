@@ -1,4 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Arangkada_rentals</string>
-    <string name="app_logo">Arangkada App Logo</string>
+    <string name="app_name">Arangkada Rentals</string>
+    <string name="app_logo">App Logo</string>
+
+    <!-- Dialog Titles -->
+    <string name="add_new_car">Add New Car</string>
+    <string name="add_new_driver">Add New Driver</string>
+    
+    <!-- Car Form Labels -->
+    <string name="car_make">Make</string>
+    <string name="car_model">Model</string>
+    <string name="car_year">Year</string>
+    <string name="car_plate_number">Plate Number</string>
+    <string name="car_price_per_day">Price per Day</string>
+    <string name="car_category">Category</string>
+
+    <string name="car_image">Car Image</string>
+    <string name="more_options">More options</string>
+
+    <!-- Driver Form Labels -->
+    <string name="driver_username">Username</string>
+    <string name="driver_email">Email</string>
+    <string name="driver_license_number">License Number</string>
+    <string name="driver_license_expiry">License Expiry (YYYY-MM-DD)</string>
+    <string name="driver_contact_number">Contact Number</string>
+    <string name="driver_address">Address</string>
+    <string name="driver_status">Status</string>
+    
+    <!-- Button Labels -->
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    
+    <!-- Car Categories -->
+    <string-array name="car_categories">
+        <item>Economy</item>
+        <item>Luxury</item>
+        <item>SUV</item>
+        <item>Sports</item>
+    </string-array>
+    
+    <!-- Driver Status Options -->
+    <string-array name="driver_status_options">
+        <item>Active</item>
+        <item>Inactive</item>
+        <item>Suspended</item>
+    </string-array>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
 </resources>

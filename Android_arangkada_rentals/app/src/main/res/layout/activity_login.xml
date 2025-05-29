@@ -2,43 +2,35 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:fitsSystemWindows="true"
-    android:scrollbars="none"
     android:background="@android:color/white">
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/registerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="24dp"
-        android:focusable="true"
-        android:focusableInTouchMode="true"
-        tools:context="com.example.arangkada_rentals.RegisterActivity">
+        android:padding="24dp">
 
         <!-- App Logo -->
         <ImageView
             android:id="@+id/logoImage"
             android:layout_width="200dp"
             android:layout_height="120dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:contentDescription="@string/app_logo"
-            android:scaleType="fitCenter"
             android:src="@drawable/arangkada"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Title -->
+        <!-- Login Title -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Create Account"
+            android:layout_marginTop="32dp"
+            android:text="Login to Your Account"
             android:textColor="#0D47A1"
             android:textSize="24sp"
             android:textStyle="bold"
@@ -46,32 +38,12 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/logoImage" />
 
-        <!-- Username Input -->
-        <EditText
-            android:id="@+id/etUsername"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginTop="32dp"
-            android:background="@android:drawable/editbox_background"
-            android:backgroundTint="@android:color/darker_gray"
-            android:drawableStart="@android:drawable/ic_menu_myplaces"
-            android:drawablePadding="8dp"
-            android:hint="Username"
-            android:imeOptions="actionNext"
-            android:inputType="text"
-            android:nextFocusDown="@id/etEmail"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTitle" />
-
         <!-- Email Input -->
         <EditText
             android:id="@+id/etEmail"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:background="@android:drawable/editbox_background"
             android:drawableStart="@android:drawable/ic_dialog_email"
             android:drawablePadding="8dp"
@@ -79,12 +51,11 @@
             android:inputType="textEmailAddress"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:imeOptions="actionNext"
-            android:nextFocusDown="@id/etPassword"
-            android:backgroundTint="@android:color/darker_gray"
+            android:textColor="#333333"
+            android:textColorHint="#666666"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/etUsername" />
+            app:layout_constraintTop_toBottomOf="@id/tvTitle" />
 
         <!-- Password Input -->
         <EditText
@@ -99,74 +70,53 @@
             android:inputType="textPassword"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:imeOptions="actionNext"
-            android:nextFocusDown="@id/etConfirmPassword"
-            android:backgroundTint="@android:color/darker_gray"
+            android:textColor="#333333"
+            android:textColorHint="#666666"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/etEmail" />
-
-        <!-- Confirm Password Input -->
-        <EditText
-            android:id="@+id/etConfirmPassword"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginTop="16dp"
-            android:background="@android:drawable/editbox_background"
-            android:drawableStart="@android:drawable/ic_lock_idle_lock"
-            android:drawablePadding="8dp"
-            android:hint="Confirm Password"
-            android:inputType="textPassword"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:imeOptions="actionDone"
-            android:backgroundTint="@android:color/darker_gray"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/etPassword" />
 
         <!-- Progress Bar -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="16dp"
             android:visibility="gone"
-            android:indeterminateTint="#0D47A1"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/etConfirmPassword" />
+            app:layout_constraintTop_toBottomOf="@id/etPassword" />
 
-        <!-- Register Button -->
+        <!-- Login Button -->
         <Button
-            android:id="@+id/btnRegister"
+            android:id="@+id/btnLogin"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:backgroundTint="#0D47A1"
-            android:minHeight="48dp"
-            android:text="Create Account"
+            android:padding="16dp"
+            android:text="Login"
             android:textAllCaps="false"
-            android:textColor="#FFFFFF"
+            android:textColor="@android:color/white"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/progressBar" />
 
-        <!-- Login Link -->
+        <!-- Register Link -->
         <TextView
-            android:id="@+id/tvLogin"
+            android:id="@+id/tvRegister"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Already have an account? Login"
+            android:text="Don't have an account? Register"
             android:textColor="#0D47A1"
             android:textSize="16sp"
             android:clickable="true"
             android:focusable="true"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btnRegister" />
+            app:layout_constraintTop_toBottomOf="@id/btnLogin" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView> 

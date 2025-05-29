@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/ivDriverAvatar"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@android:drawable/ic_menu_myplaces"
+            android:background="@android:color/darker_gray"
+            android:padding="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvDriverName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Driver Name"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toEndOf="@id/ivDriverAvatar"
+            app:layout_constraintEnd_toStartOf="@id/btnMore"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvDriverEmail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:text="driver@email.com"
+            android:textColor="@android:color/darker_gray"
+            app:layout_constraintStart_toEndOf="@id/ivDriverAvatar"
+            app:layout_constraintEnd_toStartOf="@id/btnMore"
+            app:layout_constraintTop_toBottomOf="@id/tvDriverName"/>
+
+        <TextView
+            android:id="@+id/tvLicenseNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
+            android:text="License: ABC123"
+            android:textColor="@android:color/holo_blue_dark"
+            android:background="@android:color/darker_gray"
+            android:padding="4dp"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/ivDriverAvatar"
+            app:layout_constraintTop_toBottomOf="@id/tvDriverEmail"/>
+
+        <TextView
+            android:id="@+id/tvLicenseExpiry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:text="Expires: 2025-12-31"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/tvLicenseNumber"
+            app:layout_constraintTop_toBottomOf="@id/tvDriverEmail"/>
+
+        <ImageButton
+            android:id="@+id/btnMore"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_more"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Active"
+            android:textColor="@android:color/holo_green_dark"
+            android:layout_marginTop="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnMore"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.cardview.widget.CardView> 

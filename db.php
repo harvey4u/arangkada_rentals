@@ -1,6 +1,6 @@
 <?php
 $host = '127.0.0.1';       // Use IP instead of 'localhost' to avoid socket issues
-$port = '3308';            // Separate the port
+$port = '3306';            // Separate the port
 $db   = 'car_rental_system';
 $user = 'root';
 $pass = '';                // Default for XAMPP

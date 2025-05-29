@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Theme colors -->
+    <color name="primary">#0D47A1</color>
+    <color name="primary_dark">#002171</color>
+    <color name="secondary">#1976D2</color>
+    <color name="secondary_dark">#004BA0</color>
+    <color name="background">#FFFFFF</color>
+    <color name="background_dark">#121212</color>
+
+    <!-- Standard colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- Car status colors -->
+    <color name="available_green">#4CAF50</color>
+    <color name="rented_red">#F44336</color>
+    <color name="maintenance_yellow">#FFC107</color>
+    <color name="completed_blue">#1976D2</color>
 </resources>

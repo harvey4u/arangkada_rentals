@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#0D47A1"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:title="Manage Users"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- Search Bar -->
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:background="@android:drawable/editbox_background"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawablePadding="8dp"
+            android:hint="Search users..."
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Role Filter -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupRoles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/etSearch">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipAll"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All"
+                android:checked="true"
+                style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipStaff"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Staff"
+                style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipDriver"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Driver"
+                style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipClient"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Client"
+                style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Users RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvUsers"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:clipToPadding="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/chipGroupRoles" />
+
+        <!-- Progress Bar -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Empty State -->
+        <TextView
+            android:id="@+id/tvEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No users found"
+            android:textColor="#666666"
+            android:textSize="18sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Add User FAB -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabAddUser"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:src="@android:drawable/ic_input_add"
+            android:tint="@android:color/white"
+            android:backgroundTint="#0D47A1"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout> 
