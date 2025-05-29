@@ -101,6 +101,20 @@ $stmt = $pdo->query("
     ORDER BY u.username
 ");
 $clients = $stmt->fetchAll();
+
+// Reservation code search
+$searched_rental = null;
+if (isset($_GET['code']) && $_GET['code']) {
+    $code = strtoupper(trim($_GET['code']));
+    $stmt = $pdo->prepare("SELECT r.*, c.make, c.model, c.year, c.plate_number, u.username as client_name, DATEDIFF(r.end_date, r.start_date) as duration, cc.name as category_name
+        FROM rentals r
+        JOIN cars c ON r.car_id = c.id
+        JOIN users u ON r.client_id = u.id
+        LEFT JOIN car_categories cc ON c.category_id = cc.id
+        WHERE r.reservation_code = ?");
+    $stmt->execute([$code]);
+    $searched_rental = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 ?>
 
 <!DOCTYPE html>
@@ -428,6 +442,12 @@ $clients = $stmt->fetchAll();
     ?>
 
     <main class="main-content">
+        <div style="max-width:400px;margin:0 auto 2rem auto;">
+            <form action="manage_rentals.php" method="get" style="display: flex; gap: 0.5rem; align-items: center; background: #f4f6f9; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 4px rgba(52,152,219,0.07);">
+                <input type="text" name="code" class="form-control" placeholder="Enter Reservation Code" style="flex:1; border-radius:4px; border:1px solid #ccc; padding:0.5rem 0.8rem; font-size:1rem;" required>
+                <button type="submit" class="btn btn-primary" style="padding:0.5rem 1rem; border-radius:4px;"><i class="fas fa-search"></i> Search</button>
+            </form>
+        </div>
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">
@@ -452,6 +472,57 @@ $clients = $stmt->fetchAll();
                     <i class="fas fa-exclamation-circle"></i>
                     <?= htmlspecialchars($error_message) ?>
                 </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['code'])): ?>
+                <?php if ($searched_rental): ?>
+                    <div class="rental-card" style="border:2px solid #3498db;">
+                        <div class="rental-header">
+                            <div>
+                                <h3 class="rental-title">
+                                    <?= htmlspecialchars($searched_rental['make'] . ' ' . $searched_rental['model'] . ' ' . $searched_rental['year']) ?>
+                                    <small>(<?= htmlspecialchars($searched_rental['category_name']) ?>)</small>
+                                </h3>
+                                <div class="meta-value"><?= htmlspecialchars($searched_rental['plate_number']) ?></div>
+                            </div>
+                            <span class="rental-status status-<?= $searched_rental['status'] ?>">
+                                <i class="fas fa-circle"></i>
+                                <?= ucfirst($searched_rental['status']) ?>
+                            </span>
+                        </div>
+                        <div class="rental-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">Client</span>
+                                <span class="meta-value"><?= htmlspecialchars($searched_rental['client_name']) ?></span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Duration</span>
+                                <span class="meta-value"><?= $searched_rental['duration'] ?> days</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Start Date</span>
+                                <span class="meta-value"><?= date('M d, Y', strtotime($searched_rental['start_date'])) ?></span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">End Date</span>
+                                <span class="meta-value"><?= date('M d, Y', strtotime($searched_rental['end_date'])) ?></span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Total Amount</span>
+                                <span class="rental-amount">₱<?= number_format($searched_rental['total_price'], 2) ?></span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Reservation Code</span>
+                                <span class="meta-value" style="font-weight:700;letter-spacing:2px;"><?= htmlspecialchars($searched_rental['reservation_code']) ?></span>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        No rental found for code <strong><?= htmlspecialchars($_GET['code']) ?></strong>.
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php foreach ($rentals as $rental): ?>
