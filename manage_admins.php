@@ -14,6 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name = trim($_POST['last_name'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $address = trim($_POST['address'] ?? '');
     
     // Validate input
     $errors = [];
@@ -51,6 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
         $errors[] = "Password must be at least 6 characters long";
     }
     
+    // Check first/last name
+    if (empty($first_name)) {
+        $errors[] = "First name is required";
+    }
+    if (empty($last_name)) {
+        $errors[] = "Last name is required";
+    }
+    
     // If no errors, proceed with admin creation
     if (empty($errors)) {
         try {
@@ -58,8 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
             
             // Insert user
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, email, password, is_verified) VALUES (?, ?, ?, 1)");
-            $stmt->execute([$username, $email, $hashedPassword]);
+            $stmt = $pdo->prepare("INSERT INTO users (username, email, password, is_verified, first_name, last_name, phone, address) VALUES (?, ?, ?, 1, ?, ?, ?, ?)");
+            $stmt->execute([$username, $email, $hashedPassword, $first_name, $last_name, $phone, $address]);
             $user_id = $pdo->lastInsertId();
             
             // Get admin role ID
@@ -344,6 +356,17 @@ $admins = $stmt->fetchAll();
                 padding: var(--spacing-md);
             }
         }
+
+        .edit-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 700px) {
+            .edit-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -381,6 +404,8 @@ $admins = $stmt->fetchAll();
                     <thead>
                         <tr>
                             <th>Administrator</th>
+                            <th>Name</th>
+                            <th>Contact</th>
                             <th>Email</th>
                             <th>Created Date</th>
                             <th>Actions</th>
@@ -396,6 +421,17 @@ $admins = $stmt->fetchAll();
                                         </div>
                                         <?= htmlspecialchars($admin['username']) ?>
                                     </div>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars(($admin['first_name'] ?? '') . ' ' . ($admin['last_name'] ?? '')) ?>
+                                </td>
+                                <td>
+                                    <?php if (!empty($admin['phone'])): ?>
+                                        <div><i class="fas fa-phone"></i> <?= htmlspecialchars($admin['phone']) ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($admin['address'])): ?>
+                                        <div><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($admin['address']) ?></div>
+                                    <?php endif; ?>
                                 </td>
                                 <td><?= htmlspecialchars($admin['email']) ?></td>
                                 <td><?= date('M d, Y', strtotime($admin['created_at'])) ?></td>
@@ -415,7 +451,7 @@ $admins = $stmt->fetchAll();
 
     <!-- Add Admin Modal -->
     <div class="modal" id="addAdminModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:600px;overflow-y:auto;">
             <div class="modal-header">
                 <h3 class="modal-title">Add New Administrator</h3>
             </div>
@@ -435,23 +471,45 @@ $admins = $stmt->fetchAll();
                 <?php endif; ?>
 
                 <div class="modal-body">
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="username">Username</label>
-                        <input type="text" id="username" name="username" class="form-control" 
-                               value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>" required>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="email">Email</label>
-                        <input type="email" id="email" name="email" class="form-control" 
-                               value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="password">Password</label>
-                        <input type="password" id="password" name="password" class="form-control" required>
-                        <small class="text-muted">Password must be at least 6 characters long</small>
+                    <div class="edit-form-grid">
+                        <div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="first_name">First Name</label>
+                                <input type="text" id="first_name" name="first_name" class="form-control" value="<?php echo isset($_POST['first_name']) ? htmlspecialchars($_POST['first_name']) : ''; ?>" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="last_name">Last Name</label>
+                                <input type="text" id="last_name" name="last_name" class="form-control" value="<?php echo isset($_POST['last_name']) ? htmlspecialchars($_POST['last_name']) : ''; ?>" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="phone">Contact Number</label>
+                                <input type="text" id="phone" name="phone" class="form-control" value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="address">Address</label>
+                                <input type="text" id="address" name="address" class="form-control" value="<?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?>">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="username">Username</label>
+                                <input type="text" id="username" name="username" class="form-control" 
+                                       value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="email">Email</label>
+                                <input type="email" id="email" name="email" class="form-control" 
+                                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="password">Password</label>
+                                <input type="password" id="password" name="password" class="form-control" required>
+                                <small class="text-muted">Password must be at least 6 characters long</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="display:flex;gap:1rem;justify-content:flex-end;">
                     <button type="submit" name="create_admin" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Create Administrator
@@ -467,10 +525,14 @@ $admins = $stmt->fetchAll();
 
     <script>
         function openModal() {
-            document.getElementById('addAdminModal').classList.add('active');
-            // Clear previous error messages when opening modal
-            const alerts = document.querySelectorAll('.alert');
+            const modal = document.getElementById('addAdminModal');
+            modal.classList.add('active');
+            // Clear previous error/success messages
+            const alerts = modal.querySelectorAll('.alert');
             alerts.forEach(alert => alert.remove());
+            // Reset form fields
+            const form = modal.querySelector('form');
+            if (form) form.reset();
         }
 
         function closeModal() {
@@ -484,9 +546,18 @@ $admins = $stmt->fetchAll();
         }
 
         // Show modal if there are errors
-        <?php if (isset($error_message) || isset($success_message)): ?>
+        <?php if (isset($error_message)): ?>
         document.addEventListener('DOMContentLoaded', function() {
             openModal();
+        });
+        <?php endif; ?>
+
+        // If admin was created successfully, reload page after short delay to update list and close modal
+        <?php if (isset($success_message)): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                window.location.href = window.location.pathname;
+            }, 1200); // 1.2 seconds for user to see the message
         });
         <?php endif; ?>
 
@@ -498,7 +569,7 @@ $admins = $stmt->fetchAll();
             }
         }
 
-        // Auto-hide success messages after 5 seconds
+        // Auto-hide success messages after 5 seconds (if not reloading)
         document.addEventListener('DOMContentLoaded', function() {
             const successAlerts = document.querySelectorAll('.alert-success');
             successAlerts.forEach(alert => {
@@ -507,7 +578,7 @@ $admins = $stmt->fetchAll();
                     alert.style.transform = 'translateY(-10px)';
                     setTimeout(() => {
                         alert.remove();
-                        closeModal(); // Close modal after success message disappears
+                        closeModal();
                     }, 300);
                 }, 5000);
             });

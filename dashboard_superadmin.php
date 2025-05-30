@@ -361,8 +361,9 @@ $activity = getRecentActivity($pdo);
     <?php include 'sidebar_superadmin.php'; ?>
 
     <main class="main-content">
+        <h2 style="font-size:1.2rem;font-weight:600;color:#64748b;margin-bottom:1.5rem;">Quick Stats</h2>
         <div class="quick-stats">
-            <div class="quick-stat">
+            <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon users">
                         <i class="fas fa-users"></i>
@@ -379,7 +380,7 @@ $activity = getRecentActivity($pdo);
                 </div>
             </div>
 
-            <div class="quick-stat">
+            <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon cars">
                         <i class="fas fa-car"></i>
@@ -394,7 +395,7 @@ $activity = getRecentActivity($pdo);
                 </div>
             </div>
 
-            <div class="quick-stat">
+            <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon rentals">
                         <i class="fas fa-file-contract"></i>
@@ -407,7 +408,7 @@ $activity = getRecentActivity($pdo);
                 </div>
             </div>
 
-            <div class="quick-stat">
+            <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon revenue">
                         <i class="fas fa-money-bill-wave"></i>

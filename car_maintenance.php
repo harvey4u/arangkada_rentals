@@ -210,6 +210,100 @@ $requests = $stmt->fetchAll();
             border-radius: var(--radius-sm);
             font-size: 0.875rem;
         }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5em;
+            font-weight: 500;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+        .btn:focus {
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background: #1746a2;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        .btn-danger:hover, .btn-danger:focus {
+            background: #a61b1b;
+        }
+        .btn-add {
+            background: var(--secondary);
+            color: var(--white);
+        }
+        .btn-add:hover, .btn-add:focus {
+            background: #12813b;
+        }
+        /* Floating Add Button on Mobile */
+        @media (max-width: 600px) {
+            .floating-add-btn {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                z-index: 1001;
+                border-radius: 50%;
+                width: 56px;
+                height: 56px;
+                justify-content: center;
+                font-size: 1.5rem;
+                box-shadow: var(--shadow);
+                padding: 0;
+            }
+            .main-content .card-header .btn-add {
+                display: none;
+            }
+        }
+        /* Modal button improvements */
+        .modal .form-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        .modal .form-group button {
+            flex: 1 1 0;
+            min-width: 120px;
+        }
+        @media (max-width: 600px) {
+            .modal .form-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .modal .form-group button {
+                min-width: 0;
+            }
+        }
+        /* Status select styling */
+        .status-select {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: 1.5px solid var(--gray-light);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            background: var(--white);
+            color: var(--dark);
+            transition: border 0.2s;
+        }
+        .status-select:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+        .request-actions {
+            margin-top: var(--spacing-md);
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -232,9 +326,9 @@ $requests = $stmt->fetchAll();
                     Car Maintenance
                 </h2>
                 <?php if ($car): ?>
-                    <button class="btn btn-primary" onclick="openModal()">
+                    <button class="btn btn-add" onclick="openModal()">
                         <i class="fas fa-plus"></i>
-                        New Maintenance Request
+                        <span>New Maintenance Request</span>
                     </button>
                 <?php endif; ?>
             </div>
@@ -301,6 +395,13 @@ $requests = $stmt->fetchAll();
     </main>
 
     <?php if ($car): ?>
+    <!-- Floating Add Button for Mobile -->
+    <button class="btn btn-add floating-add-btn" onclick="openModal()" title="New Maintenance Request" style="display:none;">
+        <i class="fas fa-plus"></i>
+    </button>
+    <?php endif; ?>
+
+    <?php if ($car): ?>
     <!-- New Maintenance Request Modal -->
     <div class="modal" id="maintenanceModal">
         <div class="modal-content">
@@ -356,6 +457,20 @@ $requests = $stmt->fetchAll();
                 }, 5000);
             });
         });
+
+        // Show floating add button on mobile
+        <?php if ($car): ?>
+        function handleFloatingAddBtn() {
+            const btn = document.querySelector('.floating-add-btn');
+            if (window.innerWidth <= 600) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', handleFloatingAddBtn);
+        window.addEventListener('DOMContentLoaded', handleFloatingAddBtn);
+        <?php endif; ?>
     </script>
 </body>
 </html> 

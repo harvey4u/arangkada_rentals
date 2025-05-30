@@ -17,15 +17,18 @@ if (!in_array($_SESSION['role'], $allowed_roles)) {
 require_once 'db.php';
 
 // Get user information
-$stmt = $pdo->prepare("
-    SELECT u.*, r.name as role_name 
-    FROM users u 
-    JOIN user_roles ur ON u.id = ur.user_id 
-    JOIN roles r ON ur.role_id = r.id 
-    WHERE u.id = ?
-");
-$stmt->execute([$_SESSION['user_id']]);
-$user = $stmt->fetch();
+function fetch_user_with_role($pdo, $user_id) {
+    $stmt = $pdo->prepare("
+        SELECT u.*, r.name as role_name 
+        FROM users u 
+        JOIN user_roles ur ON u.id = ur.user_id 
+        JOIN roles r ON ur.role_id = r.id 
+        WHERE u.id = ?
+    ");
+    $stmt->execute([$user_id]);
+    return $stmt->fetch();
+}
+$user = fetch_user_with_role($pdo, $_SESSION['user_id']);
 
 // Get additional role-specific information
 $role_stats = [];
@@ -75,10 +78,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = $_POST['phone'] ?? '';
     $address = $_POST['address'] ?? '';
     $date_of_birth = $_POST['date_of_birth'] ?? '';
-    
+    $profile_picture = $user['profile_picture'] ?? null;
+
+    // Handle profile photo upload
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = 'uploads/profile_photos/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+        $fileExtension = strtolower(pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION));
+        $newFileName = uniqid('profile_') . '.' . $fileExtension;
+        $uploadFile = $uploadDir . $newFileName;
+        if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadFile)) {
+            // Remove old photo if exists and is not default
+            if (!empty($profile_picture) && file_exists($uploadDir . $profile_picture)) {
+                @unlink($uploadDir . $profile_picture);
+            }
+            $profile_picture = $newFileName;
+        }
+    }
+
     try {
         $pdo->beginTransaction();
-        
+
         // Verify current password if trying to change password
         if (!empty($new_password)) {
             if (empty($current_password) || !password_verify($current_password, $user['password'])) {
@@ -89,19 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
             $stmt->execute([$hashed_password, $_SESSION['user_id']]);
         }
-        
-        // Update other information
-        $stmt = $pdo->prepare("UPDATE users SET email = ?, first_name = ?, last_name = ?, phone = ?, address = ?, date_of_birth = ? WHERE id = ?");
-        $stmt->execute([$email, $first_name, $last_name, $phone, $address, $date_of_birth, $_SESSION['user_id']]);
-        
+
+        // Update other information, including profile_picture
+        $stmt = $pdo->prepare("UPDATE users SET email = ?, first_name = ?, last_name = ?, phone = ?, address = ?, date_of_birth = ?, profile_picture = ? WHERE id = ?");
+        $stmt->execute([$email, $first_name, $last_name, $phone, $address, $date_of_birth, $profile_picture, $_SESSION['user_id']]);
+
         $pdo->commit();
         $success_message = "Profile updated successfully!";
-        
-        // Refresh user data
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $user = $stmt->fetch();
-        
+
+        // Refresh user data (with role)
+        $user = fetch_user_with_role($pdo, $_SESSION['user_id']);
+
     } catch (Exception $e) {
         $pdo->rollBack();
         $error_message = $e->getMessage();
@@ -310,6 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             flex-wrap: wrap;
             gap: 1rem;
+            margin-bottom: 1rem;
         }
         .col-md-6 {
             flex: 0 0 50%;
@@ -345,7 +366,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card-header">
                 <h2 class="card-title">
                     <i class="fas fa-user-circle"></i>
-                    My Profile
                 </h2>
             </div>
 
@@ -393,7 +413,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <?php endif; ?>
 
-            <form method="POST">
+            <div style="display:flex;justify-content:center;margin-bottom:1.5rem;">
+                <?php if (!empty($user['profile_picture']) && file_exists('uploads/profile_photos/' . $user['profile_picture'])): ?>
+                    <div style="width:100px;height:100px;border-radius:50%;overflow:hidden;background:#e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+                        <img src="uploads/profile_photos/<?= htmlspecialchars($user['profile_picture']) ?>" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                <?php else: ?>
+                    <div style="width:100px;height:100px;border-radius:50%;overflow:hidden;background:#e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.07);"></div>
+                <?php endif; ?>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data">
                 <div class="row">
                     <div class="form-group col-md-6">
                         <label class="form-label" for="first_name">First Name</label>
@@ -404,13 +434,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="text" id="last_name" name="last_name" class="form-control" value="<?= htmlspecialchars($user['last_name'] ?? '') ?>" required>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($user['username']) ?>" readonly>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <input type="email" id="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
+                <div class="row">
+                    <div class="form-group col-md-6">
+                        <label class="form-label" for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($user['username']) ?>" readonly>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="phone">Contact Number</label>
@@ -431,6 +463,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label class="form-label" for="new_password">New Password (leave blank to keep current)</label>
                     <input type="password" id="new_password" name="new_password" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="profile_picture">Profile Photo</label>
+                    <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*">
                 </div>
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i>

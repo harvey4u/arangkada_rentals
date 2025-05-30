@@ -370,7 +370,7 @@ $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                 <td>
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <select name="new_role" class="role-select">
+                                        <select name="new_role" class="role-select" <?= $user['id'] == $_SESSION['user_id'] ? 'disabled title="You cannot change your own role"' : '' ?>>
                                             <?php foreach ($roles as $role): ?>
                                                 <option value="<?= htmlspecialchars($role) ?>" 
                                                     <?= $role === $user['role_name'] ? 'selected' : '' ?>>
@@ -380,11 +380,14 @@ $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                         </select>
                                 </td>
                                 <td>
-                                        <button type="submit" name="update_role" class="btn btn-primary">
+                                        <button type="submit" name="update_role" class="btn btn-primary" <?= $user['id'] == $_SESSION['user_id'] ? 'disabled title="You cannot change your own role"' : '' ?>>
                                             <i class="fas fa-sync-alt"></i>
                                             Update
                                         </button>
                                     </form>
+                                    <?php if ($user['id'] == $_SESSION['user_id']): ?>
+                                        <div style="font-size:0.85em;color:#ca8a04;margin-top:0.25em;">You cannot change your own role</div>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

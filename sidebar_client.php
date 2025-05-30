@@ -188,6 +188,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         display: flex;
         align-items: center;
         justify-content: center;
+        overflow: hidden;
     }
 
     .user-avatar i {
@@ -263,9 +264,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <button class="hamburger-menu" id="sidebar-toggle">
-            <i class="fas fa-bars"></i>
-        </button>
         <a href="index.php" class="sidebar-brand">
             <i class="fas fa-car"></i>
             <h3>Arangkada</h3>
@@ -385,7 +383,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="user-info">
         <div class="user-info-content">
             <div class="user-avatar">
-                <i class="fas fa-user"></i>
+                <?php if (!empty($_SESSION['profile_photo'])): ?>
+                    <img src="<?= htmlspecialchars($_SESSION['profile_photo']) ?>" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                <?php else: ?>
+                    <i class="fas fa-user"></i>
+                <?php endif; ?>
             </div>
             <div class="user-details">
                 <div class="user-name"><?= htmlspecialchars($_SESSION['username']) ?></div>
@@ -397,48 +399,4 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>Logout</span>
         </a>
     </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const contentWrappers = document.querySelectorAll('.container');
-    
-    // Check for saved state
-    const sidebarState = localStorage.getItem('sidebarCollapsed');
-    if (sidebarState === 'true') {
-        sidebar.classList.add('collapsed');
-        contentWrappers.forEach(wrapper => wrapper.style.marginLeft = '0');
-    }
-
-    sidebarToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('collapsed');
-        const isCollapsed = sidebar.classList.contains('collapsed');
-        
-        // Save state
-        localStorage.setItem('sidebarCollapsed', isCollapsed);
-        
-        // Update content margin
-        contentWrappers.forEach(wrapper => {
-            wrapper.style.marginLeft = isCollapsed ? '0' : '250px';
-        });
-    });
-
-    // Handle responsive behavior
-    function checkWidth() {
-        if (window.innerWidth <= 768) {
-            sidebar.classList.add('collapsed');
-            contentWrappers.forEach(wrapper => wrapper.style.marginLeft = '0');
-        } else {
-            if (localStorage.getItem('sidebarCollapsed') !== 'true') {
-                sidebar.classList.remove('collapsed');
-                contentWrappers.forEach(wrapper => wrapper.style.marginLeft = '250px');
-            }
-        }
-    }
-
-    window.addEventListener('resize', checkWidth);
-    checkWidth(); // Initial check
-});
-</script> 
+</div> 

@@ -14,6 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_driver'])) {
     $username = $_POST['username'];
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name = trim($_POST['last_name'] ?? '');
+    $date_of_birth = trim($_POST['date_of_birth'] ?? '');
     $license_number = $_POST['license_number'];
     $license_expiry = $_POST['license_expiry'];
     $experience_years = $_POST['experience_years'];
@@ -21,32 +24,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_driver'])) {
     $address = $_POST['address'];
     $license_type = $_POST['license_type'];
     
-    try {
-        $pdo->beginTransaction();
-        
-        // Insert user
-        $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-        $stmt->execute([$username, $email, $password]);
-        $user_id = $pdo->lastInsertId();
-        
-        // Get driver role ID
-        $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'driver'");
-        $stmt->execute();
-        $role_id = $stmt->fetchColumn();
-        
-        // Assign driver role
-        $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-        $stmt->execute([$user_id, $role_id]);
-        
-        // Add driver details
-        $stmt = $pdo->prepare("INSERT INTO driver_details (user_id, license_number, license_expiry, experience_years, contact_number, address, license_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$user_id, $license_number, $license_expiry, $experience_years, $contact_number, $address, $license_type]);
-        
-        $pdo->commit();
-        $success_message = "Driver created successfully!";
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        $error_message = "Error creating driver: " . $e->getMessage();
+    // Check for duplicate username or email
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    $username_exists = $stmt->fetchColumn() > 0;
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $email_exists = $stmt->fetchColumn() > 0;
+
+    if ($username_exists) {
+        $error_message = "Username already exists. Please choose another.";
+    } elseif ($email_exists) {
+        $error_message = "Email already exists. Please use another email address.";
+    } else {
+        try {
+            $pdo->beginTransaction();
+            
+            // Insert user
+            $stmt = $pdo->prepare("INSERT INTO users (username, email, password, first_name, last_name, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$username, $email, $password, $first_name, $last_name, $date_of_birth]);
+            $user_id = $pdo->lastInsertId();
+            
+            // Get driver role ID
+            $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'driver'");
+            $stmt->execute();
+            $role_id = $stmt->fetchColumn();
+            
+            // Assign driver role
+            $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+            $stmt->execute([$user_id, $role_id]);
+            
+            // Add driver details
+            $stmt = $pdo->prepare("INSERT INTO driver_details (user_id, license_number, license_expiry, experience_years, contact_number, address, license_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$user_id, $license_number, $license_expiry, $experience_years, $contact_number, $address, $license_type]);
+            
+            $pdo->commit();
+            $success_message = "Driver created successfully!";
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            $error_message = "Error creating driver: " . $e->getMessage();
+        }
     }
 }
 
@@ -320,6 +338,17 @@ $drivers = $stmt->fetchAll();
                 padding: var(--spacing-md);
             }
         }
+
+        .edit-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 700px) {
+            .edit-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -414,51 +443,69 @@ $drivers = $stmt->fetchAll();
 
     <!-- Add Driver Modal -->
     <div class="modal" id="addDriverModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:600px;overflow-y:auto;">
             <div class="modal-header">
                 <h3 class="modal-title">Add New Driver</h3>
             </div>
             <form method="POST">
-                <div class="form-group">
-                    <label class="form-label" for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" required>
+                <div class="edit-form-grid">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="first_name">First Name</label>
+                            <input type="text" id="first_name" name="first_name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="last_name">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="date_of_birth">Date of Birth</label>
+                            <input type="date" id="date_of_birth" name="date_of_birth" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="contact_number">Contact Number</label>
+                            <input type="text" id="contact_number" name="contact_number" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="address">Address</label>
+                            <input type="text" id="address" name="address" class="form-control">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="username">Username</label>
+                            <input type="text" id="username" name="username" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="password">Password</label>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="license_number">License Number</label>
+                            <input type="text" id="license_number" name="license_number" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="license_expiry">License Expiry</label>
+                            <input type="date" id="license_expiry" name="license_expiry" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="experience_years">Years of Experience</label>
+                            <input type="number" id="experience_years" name="experience_years" class="form-control" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="license_type">License Type</label>
+                            <select id="license_type" name="license_type" class="form-control" required>
+                                <option value="Non-Professional">Non-Professional</option>
+                                <option value="Professional">Professional</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <input type="email" id="email" name="email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="license_number">License Number</label>
-                    <input type="text" id="license_number" name="license_number" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="license_expiry">License Expiry Date</label>
-                    <input type="date" id="license_expiry" name="license_expiry" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="experience_years">Years of Experience</label>
-                    <input type="number" id="experience_years" name="experience_years" class="form-control" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="contact_number">Contact Number</label>
-                    <input type="text" id="contact_number" name="contact_number" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="address">Address</label>
-                    <input type="text" id="address" name="address" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="license_type">License Type</label>
-                    <select id="license_type" name="license_type" class="form-control" required>
-                        <option value="Non-Professional">Non-Professional</option>
-                        <option value="Professional">Professional</option>
-                    </select>
-                </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
                     <button type="submit" name="create_driver" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Create Driver

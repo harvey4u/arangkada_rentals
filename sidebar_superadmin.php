@@ -8,6 +8,15 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 
 // Get the current page name
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// Fetch current user's profile picture
+$profile_picture = null;
+if (isset($_SESSION['user_id'])) {
+    require_once 'db.php';
+    $stmt = $pdo->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $profile_picture = $stmt->fetchColumn();
+}
 ?>
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -389,8 +398,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
     <div class="user-info">
         <div class="user-info-content">
-            <div class="user-avatar">
-                <i class="fas fa-user-shield"></i>
+            <div class="user-avatar" style="overflow:hidden;">
+                <?php if (!empty($profile_picture) && file_exists('uploads/profile_photos/' . $profile_picture)): ?>
+                    <img src="uploads/profile_photos/<?= htmlspecialchars($profile_picture) ?>" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
             </div>
             <div class="user-details">
                 <div class="user-name"><?= htmlspecialchars($_SESSION['username']) ?></div>

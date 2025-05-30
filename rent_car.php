@@ -46,14 +46,20 @@ $required_license = ($category === 'sports') ? 'Professional' : null;
 $reservation_percent = 20;
 
 // Handle rental form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_date'], $_POST['end_date'], $_POST['rental_option'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_date'], $_POST['end_date'], $_POST['rental_option'], $_POST['start_time'], $_POST['end_time'])) {
     $start_date = $_POST['start_date'];
     $end_date = $_POST['end_date'];
+    $start_time = $_POST['start_time'];
+    $end_time = $_POST['end_time'];
     $rental_option = $_POST['rental_option'];
-    $days = (strtotime($end_date) - strtotime($start_date)) / 86400 + 1;
-    if ($days < 1) {
-        $error_message = 'End date must be after start date.';
+    // Calculate duration in hours
+    $start_dt = strtotime($start_date . ' ' . $start_time);
+    $end_dt = strtotime($end_date . ' ' . $end_time);
+    $hours = ($end_dt - $start_dt) / 3600;
+    if ($hours < 1) {
+        $error_message = 'Rental must be at least 1 hour. End date/time must be after start date/time.';
     } else {
+        $days = ceil($hours / 24);
         $total_price = $days * $car['price_per_day'];
         $driver_id = null;
         $client_license_number = null;
@@ -69,17 +75,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_date'], $_POST[
             } elseif (!isset($_FILES['client_license_file']) || $_FILES['client_license_file']['error'] !== UPLOAD_ERR_OK) {
                 $error_message = 'Please upload a photo of your license.';
             } else {
-                $uploadDir = 'uploads/licenses/';
-                if (!file_exists($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
-                }
+                // File validation
+                $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
                 $fileExtension = strtolower(pathinfo($_FILES['client_license_file']['name'], PATHINFO_EXTENSION));
-                $newFileName = uniqid('license_') . '.' . $fileExtension;
-                $uploadFile = $uploadDir . $newFileName;
-                if (move_uploaded_file($_FILES['client_license_file']['tmp_name'], $uploadFile)) {
-                    $client_license_file = $newFileName;
+                $fileSize = $_FILES['client_license_file']['size'];
+                if (!in_array($fileExtension, $allowed_types)) {
+                    $error_message = 'License file must be an image (jpg, jpeg, png, gif, webp).';
+                } elseif ($fileSize > 5 * 1024 * 1024) {
+                    $error_message = 'License file must be less than 5MB.';
                 } else {
-                    $error_message = 'Failed to upload license file.';
+                    $uploadDir = 'uploads/licenses/';
+                    if (!file_exists($uploadDir)) {
+                        mkdir($uploadDir, 0777, true);
+                    }
+                    $newFileName = uniqid('license_') . '.' . $fileExtension;
+                    $uploadFile = $uploadDir . $newFileName;
+                    if (move_uploaded_file($_FILES['client_license_file']['tmp_name'], $uploadFile)) {
+                        $client_license_file = $newFileName;
+                    } else {
+                        $error_message = 'Failed to upload license file.';
+                    }
                 }
             }
         } elseif ($rental_option === 'with_driver') {
@@ -94,9 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_date'], $_POST[
             // Generate unique code
             $unique_code = strtoupper(bin2hex(random_bytes(4)));
             try {
-                $stmt = $pdo->prepare("INSERT INTO rentals (user_id, client_id, car_id, start_date, end_date, total_price, status, created_at, payment_status, driver_id, notes, reservation_code) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW(), 'pending', ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO rentals (user_id, client_id, car_id, start_date, end_date, start_time, end_time, total_price, status, created_at, payment_status, driver_id, notes, reservation_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), 'pending', ?, ?, ?)");
                 $notes = $rental_option === 'no_driver' ? 'License: ' . $client_license_number . ' (' . $client_license_type . ')' : null;
-                $stmt->execute([$user_id, $user_id, $car_id, $start_date, $end_date, $total_price, $driver_id, $notes, $unique_code]);
+                $stmt->execute([$user_id, $user_id, $car_id, $start_date, $end_date, $start_time, $end_time, $total_price, $driver_id, $notes, $unique_code]);
                 $rental_id = $pdo->lastInsertId();
                 // Set rental as active after generating the receipt
                 $pdo->prepare("UPDATE rentals SET status = 'active' WHERE id = ?")->execute([$rental_id]);
@@ -168,8 +183,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_date'], $_POST[
                             <input type="date" class="form-control" id="start_date" name="start_date" required min="<?= date('Y-m-d') ?>">
                         </div>
                         <div class="mb-3">
+                            <label for="start_time" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="start_time" name="start_time" required value="08:00">
+                        </div>
+                        <div class="mb-3">
                             <label for="end_date" class="form-label">End Date</label>
                             <input type="date" class="form-control" id="end_date" name="end_date" required min="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_time" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="end_time" name="end_time" required value="17:00">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Rental Option</label><br>
@@ -255,6 +278,23 @@ driverSelect && driverSelect.addEventListener('change', function() {
     } else {
         driverInfoBox.innerHTML = '';
         driverInfoBox.style.display = 'none';
+    }
+});
+// Date/time validation
+const rentalForm = document.getElementById('rentalForm');
+rentalForm.addEventListener('submit', function(e) {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const startTime = document.getElementById('start_time').value;
+    const endTime = document.getElementById('end_time').value;
+    if (startDate && endDate && startTime && endTime) {
+        const start = new Date(startDate + 'T' + startTime);
+        const end = new Date(endDate + 'T' + endTime);
+        const hours = (end - start) / (1000 * 60 * 60);
+        if (hours < 1) {
+            e.preventDefault();
+            alert('Rental must be at least 1 hour. End date/time must be after start date/time.');
+        }
     }
 });
 </script>

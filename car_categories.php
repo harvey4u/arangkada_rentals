@@ -15,15 +15,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_category'])) {
     $description = $_POST['description'];
     $base_price = $_POST['base_price'];
     
-    try {
-        $stmt = $pdo->prepare("
-            INSERT INTO car_categories (name, description, base_price) 
-            VALUES (?, ?, ?)
-        ");
-        $stmt->execute([$name, $description, $base_price]);
-        $success_message = "Category added successfully!";
-    } catch (PDOException $e) {
-        $error_message = "Error adding category: " . $e->getMessage();
+    // Check for duplicate category name
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM car_categories WHERE name = ?");
+    $stmt->execute([$name]);
+    $name_exists = $stmt->fetchColumn() > 0;
+    if ($name_exists) {
+        $error_message = "Category name already exists. Please choose another name.";
+    } else {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO car_categories (name, description, base_price) 
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([$name, $description, $base_price]);
+            $success_message = "Category added successfully!";
+        } catch (PDOException $e) {
+            $error_message = "Error adding category: " . $e->getMessage();
+        }
     }
 }
 
@@ -34,16 +42,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_category'])) {
     $description = $_POST['description'];
     $base_price = $_POST['base_price'];
     
-    try {
-        $stmt = $pdo->prepare("
-            UPDATE car_categories 
-            SET name = ?, description = ?, base_price = ? 
-            WHERE id = ?
-        ");
-        $stmt->execute([$name, $description, $base_price, $category_id]);
-        $success_message = "Category updated successfully!";
-    } catch (PDOException $e) {
-        $error_message = "Error updating category: " . $e->getMessage();
+    // Check for duplicate category name (excluding current category)
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM car_categories WHERE name = ? AND id != ?");
+    $stmt->execute([$name, $category_id]);
+    $name_exists = $stmt->fetchColumn() > 0;
+    if ($name_exists) {
+        $error_message = "Category name already exists. Please choose another name.";
+    } else {
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE car_categories 
+                SET name = ?, description = ?, base_price = ? 
+                WHERE id = ?
+            ");
+            $stmt->execute([$name, $description, $base_price, $category_id]);
+            $success_message = "Category updated successfully!";
+        } catch (PDOException $e) {
+            $error_message = "Error updating category: " . $e->getMessage();
+        }
     }
 }
 
@@ -198,17 +214,154 @@ $categories = $stmt->fetchAll();
 
         .category-actions {
             display: flex;
-            gap: var(--spacing-sm);
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-md);
+            border-top: 1px solid var(--gray-light);
+            padding-top: var(--spacing-sm);
+            justify-content: flex-end;
         }
-
-        .price-tag {
+        .category-actions .btn {
+            min-width: 40px;
+            padding: 0.5rem 1rem;
+            font-size: 0.95rem;
+            border-radius: var(--radius-sm);
+            box-shadow: none;
+        }
+        .category-actions .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+        .category-actions .btn-primary:hover {
+            background: #1746a2;
+        }
+        .category-actions .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        .category-actions .btn-danger:hover {
+            background: #a61b1b;
+        }
+        .category-actions .btn i {
+            margin-right: 0.5em;
+        }
+        @media (max-width: 600px) {
+            .category-actions {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+            .category-card {
+                padding: var(--spacing-sm);
+            }
+        }
+        /* Modal button improvements */
+        .modal .form-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        .modal .form-group button {
+            flex: 1 1 0;
+            min-width: 120px;
+        }
+        @media (max-width: 600px) {
+            .modal .form-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .modal .form-group button {
+                min-width: 0;
+            }
+        }
+        /* Add/Edit/Delete Button Enhancements */
+        .btn {
             display: inline-flex;
             align-items: center;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            background: var(--primary-light);
-            color: var(--primary);
-            border-radius: var(--radius-sm);
+            gap: 0.5em;
             font-weight: 500;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+        .btn:focus {
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background: #1746a2;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        .btn-danger:hover, .btn-danger:focus {
+            background: #a61b1b;
+        }
+        .btn-edit {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        .btn-edit:hover, .btn-edit:focus {
+            background: var(--warning);
+            color: var(--white);
+        }
+        .btn-add {
+            background: var(--secondary);
+            color: var(--white);
+        }
+        .btn-add:hover, .btn-add:focus {
+            background: #12813b;
+        }
+        /* Floating Add Button on Mobile */
+        @media (max-width: 600px) {
+            .floating-add-btn {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                z-index: 1001;
+                border-radius: 50%;
+                width: 56px;
+                height: 56px;
+                justify-content: center;
+                font-size: 1.5rem;
+                box-shadow: var(--shadow);
+                padding: 0;
+            }
+            .main-content .card-header .btn-add {
+                display: none;
+            }
+        }
+        /* Icon-only buttons for Edit/Delete on mobile */
+        @media (max-width: 600px) {
+            .category-actions .btn {
+                padding: 0.5rem;
+                min-width: 40px;
+                font-size: 1.2rem;
+                justify-content: center;
+            }
+            .category-actions .btn span {
+                display: none;
+            }
+        }
+        /* Tooltip for icon-only buttons */
+        .btn[title]:hover::after, .btn[title]:focus::after {
+            content: attr(title);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--dark);
+            color: var(--white);
+            padding: 0.25em 0.75em;
+            border-radius: var(--radius-sm);
+            font-size: 0.85em;
+            white-space: nowrap;
+            margin-left: 0.5em;
+            z-index: 1002;
         }
     </style>
 </head>
@@ -222,9 +375,9 @@ $categories = $stmt->fetchAll();
                     <i class="fas fa-tags"></i>
                     Car Categories
                 </h2>
-                <button class="btn btn-primary" onclick="openModal()">
+                <button class="btn btn-add" onclick="openModal()">
                     <i class="fas fa-plus"></i>
-                    Add New Category
+                    <span>Add New Category</span>
                 </button>
             </div>
 
@@ -269,16 +422,16 @@ $categories = $stmt->fetchAll();
                         </div>
 
                         <div class="category-actions">
-                            <button class="btn btn-primary" onclick="editCategory(<?= htmlspecialchars(json_encode($category)) ?>)">
+                            <button class="btn btn-edit" title="Edit" onclick="editCategory(<?= htmlspecialchars(json_encode($category)) ?>)">
                                 <i class="fas fa-edit"></i>
-                                Edit
+                                <span>Edit</span>
                             </button>
                             <?php if ($category['car_count'] === 0): ?>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this category?');">
+                                <form method="POST" style="display: inline; position: relative;" onsubmit="return confirm('Are you sure you want to delete this category?');">
                                     <input type="hidden" name="category_id" value="<?= $category['id'] ?>">
-                                    <button type="submit" name="delete_category" class="btn btn-danger">
+                                    <button type="submit" name="delete_category" class="btn btn-danger" title="Delete">
                                         <i class="fas fa-trash"></i>
-                                        Delete
+                                        <span>Delete</span>
                                     </button>
                                 </form>
                             <?php endif; ?>
@@ -323,10 +476,15 @@ $categories = $stmt->fetchAll();
         </div>
     </div>
 
+    <!-- Floating Add Button for Mobile -->
+    <button class="btn btn-add floating-add-btn" onclick="openModal()" title="Add New Category" style="display:none;">
+        <i class="fas fa-plus"></i>
+    </button>
+
     <script>
         function openModal() {
             document.getElementById('modalTitle').textContent = 'Add New Category';
-            document.getElementById('submitBtn').textContent = 'Add Category';
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Category';
             document.getElementById('submitBtn').name = 'create_category';
             document.getElementById('categoryId').value = '';
             document.getElementById('name').value = '';
@@ -337,7 +495,7 @@ $categories = $stmt->fetchAll();
 
         function editCategory(category) {
             document.getElementById('modalTitle').textContent = 'Edit Category';
-            document.getElementById('submitBtn').textContent = 'Update Category';
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-edit"></i> Update Category';
             document.getElementById('submitBtn').name = 'update_category';
             document.getElementById('categoryId').value = category.id;
             document.getElementById('name').value = category.name;
@@ -369,6 +527,18 @@ $categories = $stmt->fetchAll();
                 }, 5000);
             });
         });
+
+        // Show floating add button on mobile
+        function handleFloatingAddBtn() {
+            const btn = document.querySelector('.floating-add-btn');
+            if (window.innerWidth <= 600) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', handleFloatingAddBtn);
+        window.addEventListener('DOMContentLoaded', handleFloatingAddBtn);
     </script>
 </body>
 </html> 

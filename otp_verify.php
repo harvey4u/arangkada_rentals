@@ -18,6 +18,32 @@ if ($email !== $registration['email']) {
 
 $message = "";
 
+// Handle resend OTP timer
+$resend_wait_seconds = 60;
+$can_resend = true;
+$resend_message = '';
+if (!isset($_SESSION['otp_last_resend'])) {
+    $_SESSION['otp_last_resend'] = 0;
+}
+if (isset($_GET['resent'])) {
+    $resend_message = 'A new OTP has been sent to your email.';
+}
+if (isset($_SESSION['otp_last_resend']) && (time() - $_SESSION['otp_last_resend']) < $resend_wait_seconds) {
+    $can_resend = false;
+    $resend_seconds_left = $resend_wait_seconds - (time() - $_SESSION['otp_last_resend']);
+}
+if (isset($_GET['resend']) && $can_resend) {
+    // Actually resend OTP (simulate or implement your email logic here)
+    // For demo, just update the session and redirect
+    $_SESSION['otp_last_resend'] = time();
+    // You would generate a new OTP and send it here, e.g.:
+    // $new_otp = ...; $_SESSION['registration']['otp'] = $new_otp; ... send email ...
+    header('Location: otp_verify.php?email=' . urlencode($email) . '&resent=1');
+    exit;
+} elseif (isset($_GET['resend']) && !$can_resend) {
+    $resend_message = '⏳ Please wait before requesting another OTP.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $otp = $_POST['otp'];
 
@@ -331,6 +357,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="message error"><?= $message ?></div>
         <?php endif; ?>
 
+        <?php if ($resend_message): ?>
+            <div class="message" style="background:#fef9c3;color:#ca8a04;"> <?= $resend_message ?> </div>
+        <?php endif; ?>
+
         <form method="POST">
             <div class="otp-input-container">
                 <input type="text" 
@@ -349,9 +379,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
 
         <div class="resend-link">
-            <a href="resend_otp.php?email=<?= urlencode($email) ?>">
+            <a href="#" id="resendOtpLink" style="<?= $can_resend ? '' : 'pointer-events:none;opacity:0.5;' ?>"
+               onclick="if(<?= $can_resend ? 'true' : 'false' ?>){window.location.href='otp_verify.php?email=<?= urlencode($email) ?>&resend=1';}return false;">
                 <i class="fas fa-redo"></i> Didn't receive the code? Resend OTP
             </a>
+            <span id="timer" style="margin-left:0.5em;color:#888;font-size:0.95em;"></span>
         </div>
     </div>
 
@@ -369,6 +401,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.querySelector('.otp-input').addEventListener('input', function(e) {
             this.value = this.value.replace(/[^0-9]/g, '');
         });
+
+        // Resend OTP timer
+        let canResend = <?= $can_resend ? 'true' : 'false' ?>;
+        let secondsLeft = <?= isset($resend_seconds_left) ? $resend_seconds_left : 0 ?>;
+        const resendLink = document.getElementById('resendOtpLink');
+        const timerSpan = document.getElementById('timer');
+        function updateTimer() {
+            if (!canResend && secondsLeft > 0) {
+                resendLink.style.pointerEvents = 'none';
+                resendLink.style.opacity = 0.5;
+                timerSpan.textContent = ` (Wait ${secondsLeft}s)`;
+                secondsLeft--;
+                setTimeout(updateTimer, 1000);
+            } else {
+                resendLink.style.pointerEvents = 'auto';
+                resendLink.style.opacity = 1;
+                timerSpan.textContent = '';
+                canResend = true;
+            }
+        }
+        if (!canResend && secondsLeft > 0) {
+            updateTimer();
+        }
     </script>
 </body>
 </html>

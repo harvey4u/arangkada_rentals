@@ -165,6 +165,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         display: flex;
         align-items: center;
         justify-content: center;
+        overflow: hidden;
     }
 
     .user-avatar i {
@@ -358,7 +359,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="user-info">
         <div class="user-info-content">
             <div class="user-avatar">
-                <i class="fas fa-user"></i>
+                <?php if (!empty($_SESSION['profile_photo'])): ?>
+                    <img src="<?= htmlspecialchars($_SESSION['profile_photo']) ?>" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                <?php else: ?>
+                    <i class="fas fa-user"></i>
+                <?php endif; ?>
             </div>
             <div class="user-details">
                 <div class="user-name"><?= htmlspecialchars($_SESSION['username']) ?></div>

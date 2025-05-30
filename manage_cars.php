@@ -61,6 +61,40 @@ if (isset($_POST['delete_car'])) {
     }
 }
 
+// Handle car update
+if (isset($_POST['edit_car'])) {
+    $car_id = $_POST['car_id'];
+    $make = $_POST['make'];
+    $model = $_POST['model'];
+    $year = $_POST['year'];
+    $price_per_day = $_POST['price_per_day'];
+    $plate_number = $_POST['plate_number'];
+    $seats = $_POST['seats'];
+    $transmission = $_POST['transmission'];
+    $fuel_type = $_POST['fuel_type'];
+    $image = $_POST['existing_image'] ?? null;
+    // Handle image upload if new image is provided
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = 'uploads/cars/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+        $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        $newFileName = uniqid() . '.' . $fileExtension;
+        $uploadFile = $uploadDir . $newFileName;
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadFile)) {
+            $image = $newFileName;
+        }
+    }
+    try {
+        $stmt = $pdo->prepare("UPDATE cars SET make=?, model=?, year=?, price_per_day=?, plate_number=?, image=?, seats=?, transmission=?, fuel_type=? WHERE id=?");
+        $stmt->execute([$make, $model, $year, $price_per_day, $plate_number, $image, $seats, $transmission, $fuel_type, $car_id]);
+        $success_message = "Car updated successfully!";
+    } catch (PDOException $e) {
+        $error_message = "Error updating car: " . $e->getMessage();
+    }
+}
+
 // Fetch all cars
 $stmt = $pdo->query("
     SELECT c.*, 
@@ -255,6 +289,14 @@ $cars = $stmt->fetchAll();
             display: flex;
             gap: var(--spacing-sm);
             margin-top: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+
+        .car-actions .btn {
+            min-width: 0;
+            flex: 1 1 0;
+            box-sizing: border-box;
         }
 
         .modal {
@@ -336,6 +378,17 @@ $cars = $stmt->fetchAll();
                 grid-template-columns: 1fr;
             }
         }
+
+        .edit-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 700px) {
+            .edit-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -406,6 +459,10 @@ $cars = $stmt->fetchAll();
                                     <i class="fas fa-tools"></i>
                                     Maintenance
                                 </button>
+                                <button class="btn btn-primary" onclick='openEditModal(<?= json_encode($car) ?>)'>
+                                    <i class="fas fa-edit"></i>
+                                    Edit
+                                </button>
                                 <button class="btn btn-danger" onclick="deleteCar(<?= $car['id'] ?>)">
                                     <i class="fas fa-trash"></i>
                                     Delete
@@ -420,61 +477,140 @@ $cars = $stmt->fetchAll();
 
     <!-- Add Car Modal -->
     <div class="modal" id="addCarModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:600px;overflow-y:auto;">
             <div class="modal-header">
                 <h3 class="modal-title">Add New Car</h3>
             </div>
             <form method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label class="form-label" for="make">Make</label>
-                    <input type="text" id="make" name="make" class="form-control" required>
+                <div class="edit-form-grid">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="make">Make</label>
+                            <input type="text" id="make" name="make" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="model">Model</label>
+                            <input type="text" id="model" name="model" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="year">Year</label>
+                            <input type="number" id="year" name="year" class="form-control" min="1900" max="<?= date('Y') + 1 ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="seats">Seats</label>
+                            <input type="number" id="seats" name="seats" class="form-control" min="1" max="20" required>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="transmission">Transmission</label>
+                            <select id="transmission" name="transmission" class="form-control" required>
+                                <option value="automatic">Automatic</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="fuel_type">Fuel Type</label>
+                            <select id="fuel_type" name="fuel_type" class="form-control" required>
+                                <option value="gasoline">Gasoline</option>
+                                <option value="diesel">Diesel</option>
+                                <option value="electric">Electric</option>
+                                <option value="hybrid">Hybrid</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="price_per_day">Price Per Day (₱)</label>
+                            <input type="number" id="price_per_day" name="price_per_day" class="form-control" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="plate_number">Plate Number</label>
+                            <input type="text" id="plate_number" name="plate_number" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="image">Car Image</label>
+                            <input type="file" id="image" name="image" class="form-control" accept="image/*">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="model">Model</label>
-                    <input type="text" id="model" name="model" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="year">Year</label>
-                    <input type="number" id="year" name="year" class="form-control" min="1900" max="<?= date('Y') + 1 ?>" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="seats">Seats</label>
-                    <input type="number" id="seats" name="seats" class="form-control" min="1" max="20" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="transmission">Transmission</label>
-                    <select id="transmission" name="transmission" class="form-control" required>
-                        <option value="automatic">Automatic</option>
-                        <option value="manual">Manual</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="fuel_type">Fuel Type</label>
-                    <select id="fuel_type" name="fuel_type" class="form-control" required>
-                        <option value="gasoline">Gasoline</option>
-                        <option value="diesel">Diesel</option>
-                        <option value="electric">Electric</option>
-                        <option value="hybrid">Hybrid</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="price_per_day">Price Per Day (₱)</label>
-                    <input type="number" id="price_per_day" name="price_per_day" class="form-control" min="0" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="plate_number">Plate Number</label>
-                    <input type="text" id="plate_number" name="plate_number" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="image">Car Image</label>
-                    <input type="file" id="image" name="image" class="form-control" accept="image/*">
-                </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
                     <button type="submit" name="create_car" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Add Car
                     </button>
                     <button type="button" class="btn btn-danger" onclick="closeModal()">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Car Modal -->
+    <div class="modal" id="editCarModal">
+        <div class="modal-content" style="max-width:600px;overflow-y:auto;">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Car</h3>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" id="edit_car_id" name="car_id">
+                <input type="hidden" id="edit_existing_image" name="existing_image">
+                <div class="edit-form-grid">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_make">Make</label>
+                            <input type="text" id="edit_make" name="make" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_model">Model</label>
+                            <input type="text" id="edit_model" name="model" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_year">Year</label>
+                            <input type="number" id="edit_year" name="year" class="form-control" min="1900" max="<?= date('Y') + 1 ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_seats">Seats</label>
+                            <input type="number" id="edit_seats" name="seats" class="form-control" min="1" max="20" required>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_transmission">Transmission</label>
+                            <select id="edit_transmission" name="transmission" class="form-control" required>
+                                <option value="automatic">Automatic</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_fuel_type">Fuel Type</label>
+                            <select id="edit_fuel_type" name="fuel_type" class="form-control" required>
+                                <option value="gasoline">Gasoline</option>
+                                <option value="diesel">Diesel</option>
+                                <option value="electric">Electric</option>
+                                <option value="hybrid">Hybrid</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_price_per_day">Price Per Day (₱)</label>
+                            <input type="number" id="edit_price_per_day" name="price_per_day" class="form-control" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_plate_number">Plate Number</label>
+                            <input type="text" id="edit_plate_number" name="plate_number" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="edit_image">Car Image (leave blank to keep current)</label>
+                            <input type="file" id="edit_image" name="image" class="form-control" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+                    <button type="submit" name="edit_car" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Save Changes
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="closeEditModal()">
                         <i class="fas fa-times"></i>
                         Cancel
                     </button>
@@ -506,6 +642,24 @@ $cars = $stmt->fetchAll();
         function requestMaintenance(carId) {
             // This will be implemented in car_maintenance.php
             window.location.href = `car_maintenance.php?car_id=${carId}`;
+        }
+
+        function openEditModal(car) {
+            document.getElementById('editCarModal').classList.add('active');
+            document.getElementById('edit_car_id').value = car.id;
+            document.getElementById('edit_make').value = car.make;
+            document.getElementById('edit_model').value = car.model;
+            document.getElementById('edit_year').value = car.year;
+            document.getElementById('edit_seats').value = car.seats;
+            document.getElementById('edit_transmission').value = car.transmission;
+            document.getElementById('edit_fuel_type').value = car.fuel_type;
+            document.getElementById('edit_price_per_day').value = car.price_per_day;
+            document.getElementById('edit_plate_number').value = car.plate_number;
+            document.getElementById('edit_existing_image').value = car.image;
+        }
+
+        function closeEditModal() {
+            document.getElementById('editCarModal').classList.remove('active');
         }
 
         // Close modal when clicking outside

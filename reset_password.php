@@ -9,6 +9,16 @@ if (!isset($_GET['email'])) {
 
 $email = $_GET['email'];
 
+// Check if user has a valid, non-expired OTP before showing the form
+$stmt = $pdo->prepare("SELECT verification_code, verification_expires_at FROM users WHERE email = ?");
+$stmt->execute([$email]);
+$user_otp = $stmt->fetch();
+if (!$user_otp || !$user_otp['verification_code'] || strtotime($user_otp['verification_expires_at']) < time()) {
+    $_SESSION['error_message'] = "Your OTP code is missing or expired. Please request a new password reset email.";
+    header('Location: recover.php?email=' . urlencode($email));
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $otp = $_POST['otp'];
     $new_password = $_POST['new_password'];
@@ -18,21 +28,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['error_message'] = "Passwords do not match.";
     } else {
         try {
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND verification_code = ? AND verification_expires_at > NOW()");
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND verification_code = ?");
             $stmt->execute([$email, $otp]);
             $user = $stmt->fetch();
-
             if ($user) {
-                // Hash the new password and update the user
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $updateStmt = $pdo->prepare("UPDATE users SET password = ?, verification_code = NULL, verification_expires_at = NULL WHERE email = ?");
-                $updateStmt->execute([$hashed_password, $email]);
-
-                $_SESSION['success_message'] = "Password has been reset successfully. You can now login with your new password.";
-                header("Location: login.php");
-                exit;
+                if (strtotime($user['verification_expires_at']) < time()) {
+                    $_SESSION['error_message'] = "Your OTP code has expired. Please request a new password reset email.";
+                } else {
+                    // Hash the new password and update the user
+                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                    $updateStmt = $pdo->prepare("UPDATE users SET password = ?, verification_code = NULL, verification_expires_at = NULL WHERE email = ?");
+                    $updateStmt->execute([$hashed_password, $email]);
+                    $_SESSION['message'] = "✅ Your password has been changed. You can now log in with your new password.";
+                    header("Location: login.php");
+                    exit;
+                }
             } else {
-                $_SESSION['error_message'] = "Invalid or expired OTP code.";
+                $_SESSION['error_message'] = "Invalid OTP code. Please check your email and try again.";
             }
         } catch (PDOException $e) {
             $_SESSION['error_message'] = "Database error. Please try again later.";
@@ -190,6 +202,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <button type="submit" class="btn">Reset Password</button>
         </form>
+        <div style="text-align:center;margin-top:1.5em;">
+            <a href="recover.php?email=<?=urlencode($email)?>" style="color:#3498db;text-decoration:underline;font-size:0.98em;">Resend OTP / Forgot your code?</a>
+        </div>
     </div>
 
     <footer class="footer">

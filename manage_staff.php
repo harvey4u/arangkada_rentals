@@ -14,13 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_staff'])) {
     $username = $_POST['username'];
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name = trim($_POST['last_name'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $address = trim($_POST['address'] ?? '');
     
     try {
         $pdo->beginTransaction();
         
         // Insert user
-        $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-        $stmt->execute([$username, $email, $password]);
+        $stmt = $pdo->prepare("INSERT INTO users (username, email, password, first_name, last_name, phone, address) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$username, $email, $password, $first_name, $last_name, $phone, $address]);
         $user_id = $pdo->lastInsertId();
         
         // Get staff role ID (role_id = 3 for staff)
@@ -335,6 +339,17 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
                 padding: var(--spacing-md);
             }
         }
+
+        .edit-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 700px) {
+            .edit-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -416,24 +431,46 @@ $departments = ['Operations', 'Customer Service', 'Maintenance', 'Administration
 
     <!-- Add Staff Modal -->
     <div class="modal" id="addStaffModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:600px;overflow-y:auto;">
             <div class="modal-header">
                 <h3 class="modal-title">Add New Staff Member</h3>
             </div>
             <form method="POST">
-                <div class="form-group">
-                    <label class="form-label" for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" required>
+                <div class="edit-form-grid">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="first_name">First Name</label>
+                            <input type="text" id="first_name" name="first_name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="last_name">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="phone">Contact Number</label>
+                            <input type="text" id="phone" name="phone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="address">Address</label>
+                            <input type="text" id="address" name="address" class="form-control">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label" for="username">Username</label>
+                            <input type="text" id="username" name="username" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="password">Password</label>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <input type="email" id="email" name="email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
-                </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
                     <button type="submit" name="create_staff" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Create Staff Member

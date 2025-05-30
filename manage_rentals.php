@@ -39,25 +39,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     }
 }
 
+// Helper function to generate a unique reservation code
+function generateReservationCode($pdo) {
+    do {
+        $code = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM rentals WHERE reservation_code = ?");
+        $stmt->execute([$code]);
+    } while ($stmt->fetchColumn() > 0);
+    return $code;
+}
+
 // Handle rental creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_rental'])) {
     $car_id = $_POST['car_id'];
     $client_id = $_POST['client_id'];
     $start_date = $_POST['start_date'];
     $end_date = $_POST['end_date'];
+    $start_time = $_POST['start_time'] ?? '08:00';
+    $end_time = $_POST['end_time'] ?? '08:00';
     $total_price = $_POST['total_price'];
     $user_id = $_SESSION['user_id']; // Get the logged-in user's ID
-    
+    $reservation_code = generateReservationCode($pdo);
     try {
         $pdo->beginTransaction();
-        
         // Create rental record
         $stmt = $pdo->prepare("
-            INSERT INTO rentals (car_id, client_id, user_id, start_date, end_date, total_price, status) 
-            VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            INSERT INTO rentals (car_id, client_id, user_id, start_date, end_date, start_time, end_time, total_price, status, reservation_code) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
         ");
-        $stmt->execute([$car_id, $client_id, $user_id, $start_date, $end_date, $total_price]);
-        
+        $stmt->execute([$car_id, $client_id, $user_id, $start_date, $end_date, $start_time, $end_time, $total_price, $reservation_code]);
         $pdo->commit();
         $success_message = "Rental created successfully!";
     } catch (PDOException $e) {
@@ -500,12 +510,16 @@ if (isset($_GET['code']) && $_GET['code']) {
                                 <span class="meta-value"><?= $searched_rental['duration'] ?> days</span>
                             </div>
                             <div class="meta-item">
-                                <span class="meta-label">Start Date</span>
-                                <span class="meta-value"><?= date('M d, Y', strtotime($searched_rental['start_date'])) ?></span>
+                                <span class="meta-label">Start Date & Time</span>
+                                <span class="meta-value">
+                                    <?= date('M d, Y', strtotime($searched_rental['start_date'])) ?> <?= htmlspecialchars($searched_rental['start_time'] ?? '') ?>
+                                </span>
                             </div>
                             <div class="meta-item">
-                                <span class="meta-label">End Date</span>
-                                <span class="meta-value"><?= date('M d, Y', strtotime($searched_rental['end_date'])) ?></span>
+                                <span class="meta-label">End Date & Time</span>
+                                <span class="meta-value">
+                                    <?= date('M d, Y', strtotime($searched_rental['end_date'])) ?> <?= htmlspecialchars($searched_rental['end_time'] ?? '') ?>
+                                </span>
                             </div>
                             <div class="meta-item">
                                 <span class="meta-label">Total Amount</span>
@@ -551,12 +565,16 @@ if (isset($_GET['code']) && $_GET['code']) {
                             <span class="meta-value"><?= $rental['duration'] ?> days</span>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">Start Date</span>
-                            <span class="meta-value"><?= date('M d, Y', strtotime($rental['start_date'])) ?></span>
+                            <span class="meta-label">Start Date & Time</span>
+                            <span class="meta-value">
+                                <?= date('M d, Y', strtotime($rental['start_date'])) ?> <?= htmlspecialchars($rental['start_time'] ?? '') ?>
+                            </span>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">End Date</span>
-                            <span class="meta-value"><?= date('M d, Y', strtotime($rental['end_date'])) ?></span>
+                            <span class="meta-label">End Date & Time</span>
+                            <span class="meta-value">
+                                <?= date('M d, Y', strtotime($rental['end_date'])) ?> <?= htmlspecialchars($rental['end_time'] ?? '') ?>
+                            </span>
                         </div>
                         <div class="meta-item">
                             <span class="meta-label">Total Amount</span>
@@ -628,9 +646,17 @@ if (isset($_GET['code']) && $_GET['code']) {
                                min="<?= date('Y-m-d') ?>" onchange="updateTotalAmount()">
                     </div>
                     <div class="form-group">
+                        <label class="form-label" for="start_time">Start Time</label>
+                        <input type="time" id="start_time" name="start_time" class="form-control" value="08:00" required onchange="updateTotalAmount()">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label" for="end_date">End Date</label>
                         <input type="date" id="end_date" name="end_date" class="form-control" required 
                                min="<?= date('Y-m-d') ?>" onchange="updateTotalAmount()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="end_time">End Time</label>
+                        <input type="time" id="end_time" name="end_time" class="form-control" value="08:00" required onchange="updateTotalAmount()">
                     </div>
                 </div>
                 <div class="form-group">
@@ -665,30 +691,57 @@ if (isset($_GET['code']) && $_GET['code']) {
             const carSelect = document.getElementById('car_id');
             const startDate = document.getElementById('start_date').value;
             const endDate = document.getElementById('end_date').value;
-            
-            if (carSelect.value && startDate && endDate) {
+            const startTime = document.getElementById('start_time').value;
+            const endTime = document.getElementById('end_time').value;
+            if (carSelect.value && startDate && endDate && startTime && endTime) {
                 const pricePerDay = parseFloat(carSelect.options[carSelect.selectedIndex].dataset.price);
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-                
+                const start = new Date(startDate + 'T' + startTime);
+                const end = new Date(endDate + 'T' + endTime);
+                let days = (end - start) / (1000 * 60 * 60 * 24);
                 if (days > 0) {
+                    days = Math.ceil(days); // Partial days count as 1
                     const totalPrice = pricePerDay * days;
                     document.getElementById('total_price').value = totalPrice.toFixed(2);
+                } else {
+                    document.getElementById('total_price').value = '';
                 }
             }
         }
 
         // Form validation
         document.getElementById('rentalForm').addEventListener('submit', function(e) {
-            const startDate = new Date(document.getElementById('start_date').value);
-            const endDate = new Date(document.getElementById('end_date').value);
-            
-            if (endDate <= startDate) {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            const startTime = document.getElementById('start_time').value;
+            const endTime = document.getElementById('end_time').value;
+            const carSelect = document.getElementById('car_id');
+            const start = new Date(startDate + 'T' + startTime);
+            const end = new Date(endDate + 'T' + endTime);
+            if (end <= start) {
                 e.preventDefault();
-                alert('End date must be after start date');
+                alert('End date and time must be after start date and time');
+                return;
+            }
+            let days = (end - start) / (1000 * 60 * 60 * 24);
+            if (days < 1) {
+                e.preventDefault();
+                alert('Rental duration must be at least 1 day.');
+                return;
+            }
+            if (!carSelect.value) {
+                e.preventDefault();
+                alert('Please select a car.');
+                return;
             }
         });
+
+        // After successful rental creation, close modal and refresh
+        <?php if (isset($success_message) && $success_message === "Rental created successfully!"): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            closeModal();
+            setTimeout(function() { window.location.reload(); }, 500);
+        });
+        <?php endif; ?>
 
         // Close modal when clicking outside
         window.onclick = function(event) {
