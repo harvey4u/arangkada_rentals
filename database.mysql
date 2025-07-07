@@ -95,6 +95,15 @@ INSERT IGNORE INTO `users` (`id`, `username`, `password`, `email`, `created_at`,
 (5, 's', '$2y$10$6R4rkdKY6MHwvaAFQ1hUiuggmQQ4mrjbODS/AEydm5L4O41F1y7V2', 'hontiverosharvey04@gmail.com', '2025-05-25 11:55:58', NULL, NULL, 1, NULL),
 (6, 'eljhun', '$2y$10$vuR411I/cIGY1/rA1cGL0uJWcBcIv/a0H8wroWSRKnMeSD9rRUg0.', 'gmeljhun20@gmail.com', '2025-05-25 12:02:48', NULL, NULL, 1, NULL);
 
+-- Add users for each role with username and password same as role name
+INSERT IGNORE INTO `users` (`username`, `password`, `email`, `created_at`, `is_verified`, `role_id`)
+VALUES
+('superadmin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'superadmin@demo.com', NOW(), 1, 1),
+('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@demo.com', NOW(), 1, 2),
+('staff', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff@demo.com', NOW(), 1, 3),
+('client', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'client@demo.com', NOW(), 1, 4),
+('driver', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'driver@demo.com', NOW(), 1, 5);
+
 -- --------------------------------------------------------
 
 --
@@ -120,6 +129,10 @@ INSERT IGNORE INTO `user_roles` (`user_id`, `role_id`) VALUES
 (4, 4),
 (5, 4),
 (6, 4);
+
+-- Assign roles in user_roles table
+INSERT IGNORE INTO `user_roles` (`user_id`, `role_id`)
+SELECT id, role_id FROM users WHERE username IN ('superadmin', 'admin', 'staff', 'client', 'driver');
 
 -- --------------------------------------------------------
 
